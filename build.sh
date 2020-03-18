@@ -1,0 +1,1 @@
+gcc -Werror -O2 -o x86-demo protocol/uni_communication.c uart/uni_uart.c utils/uni_crc16.c utils/uni_log.c utils/uni_interruptable.c main.c -Iprotocol -Iuart -Iutils -lpthread
