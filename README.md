@@ -42,7 +42,7 @@ Usage: Linux uart protocol communication
 输入 --quit    退出uart-cli  
 输入 --help    显示所有支持的命令行  
 
-运行界面展示
+运行界面展示  
 ![image](https://github.com/junlon2006/libUartCommProtocolLinuxClient/tree/master/images/EEB3F6F6-57C3-4F40-A670-75906A9C67A7.png)  
 
 Test：  
