@@ -212,7 +212,7 @@ static void _event_list_event_handler(void *event) {
     case CHNL_MESSAGE_RASR_RESULT:
       _rasr_result(packet->payload, packet->payload_len);
       break;
-    case CHNL_MESSAGE_AWAKEN_REQUEST:
+    case CHNL_MESSAGE_LASR_RESULT_REQUEST:
       _lasr_result_request(packet->payload, packet->payload_len);
       break;
     case CHNL_MESSAGE_RECOGNIZE_REQUEST:

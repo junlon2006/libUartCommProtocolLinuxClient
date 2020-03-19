@@ -40,7 +40,7 @@ typedef enum {
   CHNL_MESSAGE_NETWORK_RESPONSE,
   CHNL_MESSAGE_NOISE_REDUCTION_RAW_DATA,
   CHNL_MESSAGE_RASR_RESULT,
-  CHNL_MESSAGE_AWAKEN_REQUEST,
+  CHNL_MESSAGE_LASR_RESULT_REQUEST,
   CHNL_MESSAGE_RECOGNIZE_REQUEST,
   CHNL_MESSAGE_PULL_NOISE_REDUCTION_DATA_REQUEST,
 } ChnlMessageType;
@@ -79,7 +79,7 @@ typedef struct {
 } PACKED ChnlOnlineAsrResult;
 
 typedef struct {
-  unsigned int type;         /* CHNL_MESSAGE_AWAKEN_REQUEST */
+  unsigned int type;         /* CHNL_MESSAGE_LASR_RESULT_REQUEST */
   unsigned int session_id;   /* vui session id */
   char         content[64];  /* awaken content */
 } PACKED ChnlLasrResultReq;
