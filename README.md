@@ -47,7 +47,4 @@ Linux client, ubuntu 16.04 test pass
 
 Enjoy it!  
 FAQ please send message to junlon2006@163.com  
-
-运行界面展示  
-![image](https://github.com/junlon2006/libUartCommProtocolLinuxClient/tree/master/images/runtime.jpg)  
-
+![运行界面](https://github.com/junlon2006/libUartCommProtocolLinuxClient/blob/master/images/runtime.jpg)  
