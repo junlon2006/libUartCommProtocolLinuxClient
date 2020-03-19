@@ -1,1 +1,1 @@
-gcc -Werror -g -o uart-cli protocol/uni_communication.c uart/uni_uart.c utils/uni_crc16.c utils/uni_log.c utils/uni_interruptable.c utils/uni_ringbuf.c utils/uni_event_list.c main.c channel/uni_channel.c -Ichannel -Iprotocol -Iuart -Iutils -lpthread
+gcc -Werror -std=gnu99 -o uart-cli protocol/uni_communication.c uart/uni_uart.c utils/uni_crc16.c utils/uni_log.c utils/uni_interruptable.c utils/uni_ringbuf.c utils/uni_event_list.c main.c channel/uni_channel.c -Ichannel -Iprotocol -Iuart -Iutils -lpthread
