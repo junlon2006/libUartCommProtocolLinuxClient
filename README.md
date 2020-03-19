@@ -1,4 +1,4 @@
-# Linux uart客户端，基于uart communication protocol的可靠通信业务
+# Linux x86 uart客户端，基于uart communication protocol的可靠通信业务
 使用方法：  
 step 1. 查找Linux当前用于通信的Uart设备号  
 1.1、将uart连接到Linux
