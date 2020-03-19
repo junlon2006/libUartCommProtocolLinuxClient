@@ -1,14 +1,20 @@
 #include "uni_log.h"
 #include "uni_uart.h"
 #include "uni_communication.h"
+#include "uni_channel.h"
+
+
 #include <stdio.h>
 #include <unistd.h>
 #include <pthread.h>
+#include <errno.h>
+#include <string.h>
 
 #define TAG "main"
 
 static void _comm_recv_packet_handler(CommPacket *packet) {
   LOGD(TAG, "recv packet, cmd=%d, len=%d", packet->cmd, packet->payload_len);
+  ChnlReceiveCommProtocolPacket(packet);
 }
 
 static long uni_get_clock_time_ms(void) {
@@ -21,63 +27,89 @@ static long uni_get_clock_time_ms(void) {
   return 0;
 }
 
-static void *_serial_send_process(void *args) {
-  char buf[2048];
+static void _do_wakeup_mode() {
+  ChnlRecognizeReq request;
+  request.mode = 0;
+  request.type = CHNL_MESSAGE_RECOGNIZE_REQUEST;
+  ChnlRecognizeRequest(&request);
+}
 
-  int cost;
-  int avg_speed;
-  int total_len = 0;
-  int start_time = -1;
-  int start;
-  int now;
+static void _do_cmd_mode() {
+  ChnlRecognizeReq request;
+  request.mode = 1;
+  request.type = CHNL_MESSAGE_RECOGNIZE_REQUEST;
+  ChnlRecognizeRequest(&request);
+}
 
-  start_time = uni_get_clock_time_ms();
-  start = start_time;
+static void _do_pull_raw_data() {
+  ChnlPullNoiseReductionDataReq request;
+  request.type = CHNL_MESSAGE_PULL_NOISE_REDUCTION_DATA_REQUEST;
+  request.mode = 1;
+  ChnlPullNoiseReductionDataRequest(&request);
+}
 
-  CommAttribute attr;
-  attr.reliable = 1;
+static void _stop_raw_data_recv() {
+  ChnlPullNoiseReductionDataReq request;
+  request.type = CHNL_MESSAGE_PULL_NOISE_REDUCTION_DATA_REQUEST;
+  request.mode = 0;
+  ChnlPullNoiseReductionDataRequest(&request);
+}
 
-  while (1) {
-    now = uni_get_clock_time_ms();
-    if (0 == CommProtocolPacketAssembleAndSend(100, buf, sizeof(buf), &attr)) {
-      total_len += sizeof(buf);
-      if (now - start >= 1000) {
-        cost = (now - start_time) / 1000;
-        avg_speed = (int)((float)total_len / (float)(now - start_time) * 1000.0 / 1024.0);
-        LOGW(TAG, "total=%dKB, cost=%d-%02d:%02d:%02d, speed=%dKB/s",
-            total_len >> 10,
-            cost / (3600 * 24),
-            cost % (3600 * 24) / 3600,
-            cost % (3600 * 24) % 3600 / 60,
-            cost % (3600 * 24) % 3600 % 60,
-            avg_speed);
-        start = now;
-      }
-    }
+static void _parse_command_line(char *cmd, int len) {
+  cmd[len - 1] = '\0';
+  LOGT(TAG, "cmd=%s", cmd);
+
+  if (0 == strcmp(cmd, "wakeup")) {
+    _do_wakeup_mode();
+    return;
+  }
+
+  if (0 == strcmp(cmd, "cmd")) {
+    _do_cmd_mode();
+    return;
+  }
+
+  if (0 == strcmp(cmd, "data1")) {
+    _do_pull_raw_data();
+    return;
+  }
+
+  if (0 == strcmp(cmd, "data0")) {
+    _stop_raw_data_recv();
+    return;
   }
 }
 
-static void _send_task() {
-  pthread_t uart_send_pid;
-  pthread_create(&uart_send_pid, NULL, _serial_send_process, NULL);
-  pthread_detach(uart_send_pid);
-}
-
-
-int main() {
+int main(int argc, char *argv[]) {
   LogLevelSet(N_LOG_TRACK);
 
   UartConfig uart_config;
   snprintf(uart_config.device, sizeof(uart_config.device), "%s", "/dev/ttyUSB0");
   uart_config.speed = B921600;
-  UartInitialize(&uart_config);
+  if (0 != UartInitialize(&uart_config)) {
+    return -1;
+  }
 
   CommProtocolInit(UartWrite, _comm_recv_packet_handler);
 
-  _send_task();
+  ChnlInit();
+
+  char cmd[1024];
   while (1) {
-    usleep(1000 * 1000 * 30);
+    int nread = read(fileno(stdin), cmd, sizeof(cmd));
+    if (nread == -1) {
+      LOGW(TAG, "read from stdin error[%s]", strerror(errno));
+      continue;
+    }
+
+    if (nread <= 1) {
+      continue;
+    }
+
+    _parse_command_line(cmd, nread);
+    LOGT(TAG, "nread=%d", nread);
   }
 
   return 0;
 }
+

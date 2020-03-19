@@ -24,6 +24,7 @@
 #include "uni_uart.h"
 #include "uni_communication.h"
 #include "uni_log.h"
+#include "uni_ringbuf.h"
 
 #include <fcntl.h>
 #include <stdio.h>
@@ -37,8 +38,9 @@
 #define TAG                       "uart"
 #define PROTOCOL_BUFFER_MAX_SIZE  (4096)
 
-static int uart_fd = -1;
-static int is_running = 0;
+static int              uart_fd = -1;
+static int              is_running = 0;
+static RingBufferHandle ringbuf = NULL;
 
 static int _set_speed(speed_t *speed) {
   int status;
@@ -63,8 +65,6 @@ static void _set_option(struct termios *options) {
   cfmakeraw(options);            /* 配置为原始模式 */
   options->c_cflag &= ~CSIZE;
   options->c_cflag |= CS8;       /* 8位数据位 */
-  //options->c_cflag |= PARENB;  /* enable parity */
-  //options->c_cflag &= ~PARODD; /* 偶校验 */
   options->c_iflag |= INPCK;     /* disable parity checking */
   options->c_cflag &= ~CSTOPB;   /* 一个停止位 */
   options->c_cc[VTIME] = 0;      /*设置等待时间*/
@@ -111,9 +111,11 @@ static void *_recv_task(void *arg) {
     if (0 < ret && FD_ISSET(uart_fd, &rfds)) {
       read_len = read(uart_fd, buffer, sizeof(buffer));
       if (read_len > 0) {
-        //TODO
-        /* async perf, but x86 not necessary */
-        CommProtocolReceiveUartData(buffer, read_len);
+        if (RingBufferGetFreeSize(ringbuf) > read_len) {
+          RingBufferWrite(ringbuf, buffer, read_len);
+        } else {
+          LOGW(TAG, "uart ringbuf full");
+        }
       }
     }
   }
@@ -122,15 +124,29 @@ static void *_recv_task(void *arg) {
   return NULL;
 }
 
-static int _create_receive_thread() {
-  pthread_t pid;
-  int ret = pthread_create(&pid, NULL, _recv_task, NULL);
-  if (ret != 0) {
-    LOGE(TAG, "uni_receive_serial pthread_create failed[%s]", strerror(errno));
-  }
+static void *_protocol_stack_parse_task(void *args) {
+  int len;
+  char buf[2048];
+  while (is_running) {
+    len = RingBufferGetDataSize(ringbuf);
+    if (len == 0) {
+      usleep(1000 * 2);
+    }
 
+    len = len > sizeof(buf) ? sizeof(buf) : len;
+    RingBufferRead(buf, len, ringbuf);
+    CommProtocolReceiveUartData((unsigned char *)buf, len);
+  }
+}
+
+static int _create_worker_thread() {
+  pthread_t pid;
+  pthread_create(&pid, NULL, _recv_task, NULL);
   pthread_detach(pid);
-  return ret;
+
+  pthread_create(&pid, NULL, _protocol_stack_parse_task, NULL);
+  pthread_detach(pid);
+  return 0;
 }
 
 int UartInitialize(UartConfig *config) {
@@ -150,8 +166,9 @@ int UartInitialize(UartConfig *config) {
     return -1;
   }
 
+  ringbuf = RingBufferCreate(8192);
   is_running = 1;
-  _create_receive_thread();
+  _create_worker_thread();
 
   LOGT(TAG, "uart init success");
   return 0;
