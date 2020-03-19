@@ -21,8 +21,8 @@
  * Date        : 2020.03.04
  *
  **************************************************************************/
-#ifndef UTILS_UART_INC_UNI_COMMUNICATION_H_
-#define UTILS_UART_INC_UNI_COMMUNICATION_H_
+#ifndef PROTOCOL_UNI_COMMUNICATION_H_
+#define PROTOCOL_UNI_COMMUNICATION_H_
 
 #ifdef __cplusplus
 extern "C" {
@@ -97,4 +97,4 @@ void CommProtocolReceiveUartData(unsigned char *buf, int len);
 #ifdef __cplusplus
 }
 #endif
-#endif  // UTILS_UART_INC_UNI_COMMUNICATION_H_
+#endif  // PROTOCOL_UNI_COMMUNICATION_H_

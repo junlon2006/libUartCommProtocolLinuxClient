@@ -22,8 +22,8 @@
  *
  **************************************************************************/
 
-#ifndef SDK_CHANNEL_INC_UNI_CHANNEL_H_
-#define SDK_CHANNEL_INC_UNI_CHANNEL_H_
+#ifndef CHANNEL_UNI_CHANNEL_H_
+#define CHANNEL_UNI_CHANNEL_H_
 
 #ifdef __cplusplus
 extern "C" {
@@ -115,4 +115,4 @@ int ChnlInit();
 #ifdef __cplusplus
 }
 #endif
-#endif  // SDK_CHANNEL_INC_UNI_CHANNEL_H_
+#endif  // CHANNEL_UNI_CHANNEL_H_

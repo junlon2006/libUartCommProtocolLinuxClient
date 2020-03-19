@@ -21,8 +21,8 @@
  * Date        : 2020.03.18
  *
  **************************************************************************/
-#ifndef UTILS_UART_INC_UNI_UART_H_
-#define UTILS_UART_INC_UNI_UART_H_
+#ifndef UART_UNI_UART_H_
+#define UART_UNI_UART_H_
 
 #ifdef __cplusplus
 extern "C" {
@@ -44,4 +44,4 @@ int UartWrite(char *buf, int len);
 #ifdef __cplusplus
 }
 #endif
-#endif  // UTILS_UART_INC_UNI_UART_H_
+#endif  // UART_UNI_UART_H_

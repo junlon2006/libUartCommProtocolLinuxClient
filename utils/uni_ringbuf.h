@@ -21,8 +21,8 @@
  * Date        : 2019.03.17
  *
  **************************************************************************/
-#ifndef RINGBUF_INC_UNI_RINGBUF_H_
-#define RINGBUF_INC_UNI_RINGBUF_H_
+#ifndef UTILS_UNI_RINGBUF_H_
+#define UTILS_UNI_RINGBUF_H_
 
 #ifdef __cplusplus
 extern "C" {
@@ -42,4 +42,4 @@ int RingBufferRead(char *dst, int readlen, RingBufferHandle handle);
 #ifdef __cplusplus
 }
 #endif
-#endif
+#endif  // UTILS_UNI_RINGBUF_H_

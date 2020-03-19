@@ -21,8 +21,8 @@
  * Date        : 2019.11.11
  *
  **************************************************************************/
-#ifndef CRC16_INC_UNI_CRC16_H_
-#define CRC16_INC_UNI_CRC16_H_
+#ifndef UTILS_UNI_CRC16_H_
+#define UTILS_UNI_CRC16_H_
 
 #ifdef __cplusplus
 extern "C" {
@@ -35,4 +35,4 @@ uint16_t crc16(const char *buf, int len);
 #ifdef __cplusplus
 }
 #endif
-#endif   //  CRC16_INC_UNI_CRC16_H_
+#endif   //  UTILS_UNI_CRC16_H_

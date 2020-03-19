@@ -21,8 +21,8 @@
  * Date        : 2019.03.23
  *
  **************************************************************************/
-#ifndef LIST_HEAD_INC_LIST_HEAD_H_
-#define LIST_HEAD_INC_LIST_HEAD_H_
+#ifndef UTILS_LIST_HEAD_H_
+#define UTILS_LIST_HEAD_H_
 
 #ifdef __cplusplus
 extern "C" {
@@ -63,4 +63,4 @@ typedef struct list_head {
 #ifdef __cplusplus
 }
 #endif
-#endif
+#endif  // UTILS_LIST_HEAD_H_

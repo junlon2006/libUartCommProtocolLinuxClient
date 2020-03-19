@@ -21,8 +21,8 @@
  * Date        : 2019.03.17
  *
  **************************************************************************/
-#ifndef LOGGER_INC_UNI_LOG_H_
-#define LOGGER_INC_UNI_LOG_H_
+#ifndef UTILS_UNI_LOG_H_
+#define UTILS_UNI_LOG_H_
 
 #ifdef __cplusplus
 extern "C" {
@@ -70,4 +70,4 @@ int LogWrite(LogLevel level, const char *tags, const char *function,
 #ifdef __cplusplus
 }   /* __cplusplus */
 #endif
-#endif  /* LOGGER_INC_UNI_LOG_H_ */
+#endif  /* UTILS_UNI_LOG_H_ */

@@ -21,8 +21,8 @@
  * Date        : 2019.03.17
  *
  **************************************************************************/
-#ifndef INTERRUPTABLE_SLEEP_INC_UNI_INTERRUPTABLE_H_
-#define INTERRUPTABLE_SLEEP_INC_UNI_INTERRUPTABLE_H_
+#ifndef UTILS_UNI_INTERRUPTABLE_H_
+#define UTILS_UNI_INTERRUPTABLE_H_
 
 #ifdef __cplusplus
 extern "C" {
@@ -38,4 +38,4 @@ int             InterruptableBreak(InterruptHandle handle);
 #ifdef __cplusplus
 }
 #endif
-#endif
+#endif  // UTILS_UNI_INTERRUPTABLE_H_
