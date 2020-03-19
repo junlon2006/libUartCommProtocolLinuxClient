@@ -1,4 +1,4 @@
-# Linux x86 uart客户端，基于uart communication protocol的可靠通信业务
+# Linux x86 uart-cli，可靠通信业务案例
 使用方法：  
 step 1. 查找Linux当前用于通信的Uart设备号  
 1.1、将uart连接到Linux  
@@ -42,11 +42,12 @@ Usage: Linux uart protocol communication
 输入 --stop    切换到停止录音模式  
 输入 --quit    退出uart-cli  
 
-运行界面展示  
-![image](https://github.com/junlon2006/libUartCommProtocolLinuxClient/tree/master/images/EEB3F6F6-57C3-4F40-A670-75906A9C67A7.jpg)  
-
 Test：  
 Linux client, ubuntu 16.04 test pass  
 
 Enjoy it!  
 FAQ please send message to junlon2006@163.com  
+
+运行界面展示  
+![image](https://github.com/junlon2006/libUartCommProtocolLinuxClient/tree/master/images/EEB3F6F6-57C3-4F40-A670-75906A9C67A7.jpg)  
+
