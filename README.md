@@ -34,19 +34,19 @@ Usage: Linux uart protocol communication
   --quit      Quit uart-cli.
 ```
 即：  
+输入 --help    显示所有支持的命令行  
+输入 --conn    检测当前串口连接状态是否完好  
 输入 --wakeup  切换到唤醒模式  
 输入 --command 切换到命令识别模式    
 输入 --start   切换到录音模式  
 输入 --stop    切换到停止录音模式  
-输入 --conn    检测当前串口连接状态是否完好  
 输入 --quit    退出uart-cli  
-输入 --help    显示所有支持的命令行  
 
 运行界面展示  
-![image](https://github.com/junlon2006/libUartCommProtocolLinuxClient/tree/master/images/EEB3F6F6-57C3-4F40-A670-75906A9C67A7.png)  
+![image](https://github.com/junlon2006/libUartCommProtocolLinuxClient/tree/master/images/EEB3F6F6-57C3-4F40-A670-75906A9C67A7.jpg)  
 
 Test：  
 Linux client, ubuntu 16.04 test pass  
 
-enjoy it!  
+Enjoy it!  
 FAQ please send message to junlon2006@163.com  
