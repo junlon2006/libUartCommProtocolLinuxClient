@@ -49,5 +49,5 @@ Enjoy it!
 FAQ please send message to junlon2006@163.com  
 
 运行界面展示  
-![image](https://github.com/junlon2006/libUartCommProtocolLinuxClient/tree/master/images/runtime.jpg)  
+![Image text](https://github.com/junlon2006/libUartCommProtocolLinuxClient/tree/master/images/runtime.jpg)  
 
