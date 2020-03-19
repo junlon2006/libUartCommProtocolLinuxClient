@@ -1,5 +1,5 @@
 /**************************************************************************
- * Copyright (C) 2020-2020  Junlon2006
+ * Copyright (C) 2020-2020 Junlon2006
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -170,7 +170,7 @@ int UartInitialize(UartConfig *config) {
   is_running = 1;
   _create_worker_thread();
 
-  LOGT(TAG, "uart init success");
+  LOGD(TAG, "uart init success");
   return 0;
 }
 

@@ -1,5 +1,5 @@
 /**************************************************************************
- * Copyright (C) 2018-2019  Junlon2006
+ * Copyright (C) 2018-2019 Junlon2006
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,8 +21,8 @@
  * Date        : 2019.03.17
  *
  **************************************************************************/
-#ifndef RINGBUF_INC_UNI_DATABUF_H_
-#define RINGBUF_INC_UNI_DATABUF_H_
+#ifndef RINGBUF_INC_UNI_RINGBUF_H_
+#define RINGBUF_INC_UNI_RINGBUF_H_
 
 #ifdef __cplusplus
 extern "C" {

@@ -1,5 +1,5 @@
 /**************************************************************************
- * Copyright (C) 2017-2017  Junlon2006
+ * Copyright (C) 2020-2020 Junlon2006
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -267,7 +267,7 @@ static int _wait_ack(CommAttribute *attribute) {
                      WAIT_ACK_TIMEOUT_MSEC);
 
   if (!g_comm_protocol_business.acked) {
-    LOGT(UART_COMM_TAG, "wait uart ack timeout");
+    LOGD(UART_COMM_TAG, "wait uart ack timeout");
   }
 
   return g_comm_protocol_business.acked ? 0 : E_UNI_COMM_PAYLOAD_ACK_TIMEOUT;
