@@ -43,7 +43,7 @@ Usage: Linux uart protocol communication
 输入 --quit    退出uart-cli  
 
 Test：  
-Linux client, ubuntu 16.04 test pass  
+Linux client, ubuntu 16.04、centos7 test pass  
 
 Enjoy it!  
 FAQ please send message to junlon2006@163.com  
