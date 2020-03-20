@@ -45,7 +45,7 @@ static Channel g_channel = {0};
 int ChnlChallengePackRequest(ChnlChallengePackReq *request) {
   CommAttribute attr;
   attr.reliable = true;
-  return CommProtocolPacketAssembleAndSend(request->type,
+  return CommProtocolPacketAssembleAndSend(CHNL_MESSAGE_CHALLENGE_PACK,
                                            (char *)request,
                                            sizeof(*request),
                                            &attr);
@@ -54,7 +54,7 @@ int ChnlChallengePackRequest(ChnlChallengePackReq *request) {
 int ChnlChallengePackResponse(ChnlChallengePackAck *response) {
   CommAttribute attr;
   attr.reliable = true;
-  return CommProtocolPacketAssembleAndSend(response->type,
+  return CommProtocolPacketAssembleAndSend(CHNL_MESSAGE_CHALLENGE_PACK_ACK,
                                            (char *)response,
                                            sizeof(*response),
                                            &attr);
@@ -63,7 +63,7 @@ int ChnlChallengePackResponse(ChnlChallengePackAck *response) {
 int ChnlNetworkStatusRequest(ChnlNetworkStatusReq *request) {
   CommAttribute attr;
   attr.reliable = true;
-  return CommProtocolPacketAssembleAndSend(request->type,
+  return CommProtocolPacketAssembleAndSend(CHNL_MESSAGE_NETWORK_REQUEST,
                                            (char *)request,
                                            sizeof(*request),
                                            &attr);
@@ -72,7 +72,7 @@ int ChnlNetworkStatusRequest(ChnlNetworkStatusReq *request) {
 int ChnlNetworkStatusResponse(ChnlNetworkStatusResp *response) {
   CommAttribute attr;
   attr.reliable = true;
-  return CommProtocolPacketAssembleAndSend(response->type,
+  return CommProtocolPacketAssembleAndSend(CHNL_MESSAGE_NETWORK_RESPONSE,
                                            (char *)response,
                                            sizeof(*response),
                                            &attr);
@@ -81,7 +81,7 @@ int ChnlNetworkStatusResponse(ChnlNetworkStatusResp *response) {
 int ChnlLasrResultRequest(ChnlLasrResultReq *request) {
   CommAttribute attr;
   attr.reliable = true;
-  return CommProtocolPacketAssembleAndSend(request->type,
+  return CommProtocolPacketAssembleAndSend(CHNL_MESSAGE_LASR_RESULT_REQUEST,
                                            (char *)request,
                                            sizeof(*request),
                                            &attr);
@@ -90,7 +90,7 @@ int ChnlLasrResultRequest(ChnlLasrResultReq *request) {
 int ChnlRecognizeRequest(ChnlRecognizeReq *request) {
   CommAttribute attr;
   attr.reliable = true;
-  return CommProtocolPacketAssembleAndSend(request->type,
+  return CommProtocolPacketAssembleAndSend(CHNL_MESSAGE_RECOGNIZE_REQUEST,
                                            (char *)request,
                                            sizeof(*request),
                                            &attr);
@@ -99,7 +99,7 @@ int ChnlRecognizeRequest(ChnlRecognizeReq *request) {
 int ChnlPullNoiseReductionDataRequest(ChnlPullNoiseReductionDataReq *request) {
   CommAttribute attr;
   attr.reliable = true;
-  return CommProtocolPacketAssembleAndSend(request->type,
+  return CommProtocolPacketAssembleAndSend(CHNL_MESSAGE_PULL_NOISE_REDUCTION_DATA_REQUEST,
                                            (char *)request,
                                            sizeof(*request),
                                            &attr);
@@ -108,7 +108,7 @@ int ChnlPullNoiseReductionDataRequest(ChnlPullNoiseReductionDataReq *request) {
 int ChnlNoiseReductionPcmDataPush(ChnlNoiseReductionPcmData *request) {
   CommAttribute attr;
   attr.reliable = true;
-  return CommProtocolPacketAssembleAndSend(request->type,
+  return CommProtocolPacketAssembleAndSend(CHNL_MESSAGE_NOISE_REDUCTION_RAW_DATA,
                                            (char *)request,
                                            sizeof(*request),
                                            &attr);
@@ -117,7 +117,7 @@ int ChnlNoiseReductionPcmDataPush(ChnlNoiseReductionPcmData *request) {
 int ChnlOnlineAsrResultResponse(ChnlOnlineAsrResult *response) {
   CommAttribute attr;
   attr.reliable = true;
-  return CommProtocolPacketAssembleAndSend(response->type,
+  return CommProtocolPacketAssembleAndSend(CHNL_MESSAGE_RASR_RESULT,
                                            (char *)response,
                                            sizeof(*response),
                                            &attr);

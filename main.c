@@ -21,7 +21,6 @@ static void _comm_recv_packet_handler(CommPacket *packet) {
 static void _do_wakeup_mode() {
   ChnlRecognizeReq request;
   request.mode = 0;
-  request.type = CHNL_MESSAGE_RECOGNIZE_REQUEST;
   if (0 == ChnlRecognizeRequest(&request)) {
     LOGT(TAG, "switch to wakeup mode success");
   } else {
@@ -34,7 +33,6 @@ static void _do_wakeup_mode() {
 static void _do_cmd_mode() {
   ChnlRecognizeReq request;
   request.mode = 1;
-  request.type = CHNL_MESSAGE_RECOGNIZE_REQUEST;
   if (0 == ChnlRecognizeRequest(&request)) {
     LOGT(TAG, "switch to command mode success");
   } else {
@@ -46,7 +44,6 @@ static void _do_cmd_mode() {
 /* 开始接收降噪后音频数据 [16000 sample, 16bit, 1channel] */
 static void _do_pull_raw_data() {
   ChnlPullNoiseReductionDataReq request;
-  request.type = CHNL_MESSAGE_PULL_NOISE_REDUCTION_DATA_REQUEST;
   request.mode = 1;
   if (0 == ChnlPullNoiseReductionDataRequest(&request)) {
     char workspace[2048] = {0};
@@ -61,7 +58,6 @@ static void _do_pull_raw_data() {
 /* 停止接收降噪后音频数据 */
 static void _stop_raw_data_recv() {
   ChnlPullNoiseReductionDataReq request;
-  request.type = CHNL_MESSAGE_PULL_NOISE_REDUCTION_DATA_REQUEST;
   request.mode = 0;
   if (0 == ChnlPullNoiseReductionDataRequest(&request)) {
     LOGT(TAG, "stop record success");
@@ -74,7 +70,6 @@ static void _stop_raw_data_recv() {
 /* 挑战包，检测串口连接是否正常 */
 static void _challenge() {
   ChnlChallengePackReq request;
-  request.type = CHNL_MESSAGE_CHALLENGE_PACK;
   request.sequence = 0;
   int ret = ChnlChallengePackRequest(&request);
   if (0 == ret) {

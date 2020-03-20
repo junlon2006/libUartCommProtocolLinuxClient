@@ -31,7 +31,8 @@ extern "C" {
 
 #include "uni_communication.h"
 
-#define PACKED   __attribute__ ((packed))
+#define PACKED        __attribute__ ((packed))
+#define PAYLOAD_SIZE  (2048)
 
 typedef enum {
   CHNL_MESSAGE_CHALLENGE_PACK = 1,
@@ -46,51 +47,42 @@ typedef enum {
 } ChnlMessageType;
 
 typedef struct {
-  unsigned int type;     /* CHNL_MESSAGE_CHALLENGE_PACK */
   unsigned int sequence; /* request sequence, sync ack flag */
 } PACKED ChnlChallengePackReq;
 
 typedef struct {
-  unsigned int type;     /* CHNL_MESSAGE_CHALLENGE_PACK_ACK */
   unsigned int sequence; /* challenge ack sequence, equal request sequence */
 } PACKED ChnlChallengePackAck;
 
 typedef struct {
-  unsigned int type;     /* CHNL_MESSAGE_NETWORK_REQUEST */
   unsigned int sequence; /* request sequence, sync ack flag */
 } PACKED ChnlNetworkStatusReq;
 
 typedef struct {
-  unsigned int type;     /* CHNL_MESSAGE_NETWORK_RESPONSE */
   unsigned int sequence; /* ack sequence, equal request sequence */
   unsigned int online;   /* 0 offline, 1 online */
 } PACKED ChnlNetworkStatusResp;
 
 typedef struct {
-  unsigned int type;      /* CHNL_MESSAGE_NOISE_REDUCTION_RAW_DATA */
-  char         data[2048];/* 64ms data default, cannot change it */
+  char         data[PAYLOAD_SIZE];/* 64ms data default, cannot change it */
 } PACKED ChnlNoiseReductionPcmData;
 
 typedef struct {
-  unsigned int  type;        /* CHNL_MESSAGE_RASR_RESULT */
-  unsigned char id;          /* 0 ~ 255, max support 512 * 256 = 128KB, enough */
-  unsigned char max_id;      /* the last id means transmit finish point */
-  char          result[2048];/* 2048 default, when not enough, subpackage */
+  unsigned char id;                  /* 0 ~ 255, max support 2048 * 256 = 512KB */
+  unsigned char max_id;              /* the last id means transmit finish point */
+  char          result[PAYLOAD_SIZE];/* 2048 default, when not enough, subpackage */
 } PACKED ChnlOnlineAsrResult;
 
 typedef struct {
-  unsigned int type;         /* CHNL_MESSAGE_LASR_RESULT_REQUEST */
   unsigned int session_id;   /* vui session id */
   char         content[64];  /* awaken content */
 } PACKED ChnlLasrResultReq;
 
 typedef struct {
-  unsigned int type;         /* CHNL_MESSAGE_RECOGNIZE_REQUEST */
   unsigned int mode;         /* 0 唤醒模式，1 识别模式, 2 关闭所有 */
 } PACKED ChnlRecognizeReq;
 
 typedef struct {
-  unsigned int type;         /* CHNL_MESSAGE_PULL_NOISE_REDUCTION_DATA_REQUEST */
   unsigned int mode;         /* 1开始接收数据，0停止接收数据 */
 } PACKED ChnlPullNoiseReductionDataReq;
 
