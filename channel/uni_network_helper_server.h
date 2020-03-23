@@ -16,42 +16,29 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  **************************************************************************
  *
- * Description : uni_channel.h
+ * Description : uni_network_helper_server.h
  * Author      : junlon2006@163.com
- * Date        : 2020.03.10
+ * Date        : 2020.03.20
  *
  **************************************************************************/
-#ifndef CHANNEL_UNI_CHANNEL_H_
-#define CHANNEL_UNI_CHANNEL_H_
+#ifndef CHANNEL_UNI_NETWORK_HELPER_SERVER_H_
+#define CHANNEL_UNI_NETWORK_HELPER_SERVER_H_
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#include "uni_communication.h"
-#include <inttypes.h>
-
-#define PACKED                       __attribute__ ((packed))
-#define PAYLOAD_LEN                 (2048)
-
-#define LASR_BUSINESS_MESSAGE_BASE  (10000)
-#define NETWORK_HELPER_MESSAGE_BASE (20000)
-
-/**
- * @brief chnl init
- * @param void
- * @return 0 success, 1 failed
- */
-int ChnlInit(void);
+#include "uni_channel.h"
 
 /**
  * @brief comm protocol packet hook
  * @param packet
- * @return void
+ * @return 0 success, -1 failed
  */
-void ChnlReceiveCommProtocolPacket(CommPacket *packet);
+int NetHelperSerRpcReceiveCommProtocolPacket(CommPacket *packet);
 
 #ifdef __cplusplus
 }
 #endif
-#endif  // CHANNEL_UNI_CHANNEL_H_
+#endif // CHANNEL_UNI_NETWORK_HELPER_SERVER_H_
+

@@ -2,6 +2,7 @@
 #include "uni_uart.h"
 #include "uni_communication.h"
 #include "uni_channel.h"
+#include "uni_asr_business.h"
 
 #include <stdio.h>
 #include <unistd.h>
@@ -14,14 +15,14 @@
 
 static void _comm_recv_packet_handler(CommPacket *packet) {
   LOGD(TAG, "recv packet, cmd=%d, len=%d", packet->cmd, packet->payload_len);
-  ChnlReceiveCommProtocolPacket(packet);
+  AsrBusReceiveCommProtocolPacket(packet);
 }
 
 /* 唤醒模式 */
 static void _do_wakeup_mode() {
-  ChnlRecognizeReq request;
+  AsrBusRecognizeReq request;
   request.mode = 0;
-  if (0 == ChnlRecognizeRequest(&request)) {
+  if (0 == AsrBusRecognizeRequest(&request)) {
     LOGT(TAG, "switch to wakeup mode success");
   } else {
     LOGW(TAG, "switch to command mode failed, "
@@ -31,9 +32,9 @@ static void _do_wakeup_mode() {
 
 /* 识别模式 */
 static void _do_cmd_mode() {
-  ChnlRecognizeReq request;
+  AsrBusRecognizeReq request;
   request.mode = 1;
-  if (0 == ChnlRecognizeRequest(&request)) {
+  if (0 == AsrBusRecognizeRequest(&request)) {
     LOGT(TAG, "switch to command mode success");
   } else {
     LOGW(TAG, "switch to command mode failed, "
@@ -43,9 +44,9 @@ static void _do_cmd_mode() {
 
 /* 开始接收降噪后音频数据 [16000 sample, 16bit, 1channel] */
 static void _do_pull_raw_data() {
-  ChnlPullNoiseReductionDataReq request;
+  AsrBusPullNoiseReductionDataReq request;
   request.mode = 1;
-  if (0 == ChnlPullNoiseReductionDataRequest(&request)) {
+  if (0 == AsrBusPullNoiseReductionDataRequest(&request)) {
     char workspace[2048] = {0};
     getcwd(workspace, sizeof(workspace));
     LOGT(TAG, "start record success. audio save in file %s/asr.pcm", workspace);
@@ -57,9 +58,9 @@ static void _do_pull_raw_data() {
 
 /* 停止接收降噪后音频数据 */
 static void _stop_raw_data_recv() {
-  ChnlPullNoiseReductionDataReq request;
+  AsrBusPullNoiseReductionDataReq request;
   request.mode = 0;
-  if (0 == ChnlPullNoiseReductionDataRequest(&request)) {
+  if (0 == AsrBusPullNoiseReductionDataRequest(&request)) {
     LOGT(TAG, "stop record success");
   } else {
     LOGW(TAG, "stop record failed, "
@@ -69,9 +70,9 @@ static void _stop_raw_data_recv() {
 
 /* 挑战包，检测串口连接是否正常 */
 static void _challenge() {
-  ChnlChallengePackReq request;
+  AsrBusChallengePackReq request;
   request.sequence = 0;
-  int ret = ChnlChallengePackRequest(&request);
+  int ret = AsrBusChallengePackRequest(&request);
   if (0 == ret) {
     LOGT(TAG, "uart connect hummingbird board success");
   } else {

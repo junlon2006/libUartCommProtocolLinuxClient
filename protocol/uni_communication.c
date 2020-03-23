@@ -40,12 +40,12 @@
 #define PROTOCOL_BUF_SUPPORT_MAX_SIZE (8192)
 
 //TODO need refactor, calculate by baud rate
-#define WAIT_ACK_TIMEOUT_MSEC         (200)
+#define WAIT_ACK_TIMEOUT_MSEC         (100)
 /* make sure ONE_FRAME_BYTE_TIMEOUT_MSEC < WAIT_ACK_TIMEOUT_MSEC
  * otherwise resend cannot work, set
  * WAIT_ACK_TIMEOUT_MSEC = 1.5 * ONE_FRAME_BYTE_TIMEOUT_MSEC */
 #define ONE_FRAME_BYTE_TIMEOUT_MSEC   (1000)
-#define TRY_RESEND_TIMES              (2)
+#define TRY_RESEND_TIMES              (5)
 
 #define uni_min(x, y)                 (x < y ? x : y)
 #define uni_max(x, y)                 (x > y ? x : y)
