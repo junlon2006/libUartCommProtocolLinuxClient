@@ -51,7 +51,6 @@ typedef struct {
 
 static SocketResource g_socks[FD_SIZE_MAX] = {0};
 static uni_mutex_t    g_mutex = NULL;
-static uint32_t       g_session_id = 0;
 
 static void _sock_fds_init() {
   int i;
@@ -66,7 +65,8 @@ static void _sock_fds_init() {
 }
 
 static int _get_current_session_id() {
-  return (++g_session_id) % FD_SIZE_MAX;
+  static uint32_t session_id = 0;
+  return ++session_id;
 }
 
 static int _get_fds_idx() {
@@ -141,18 +141,41 @@ int NetHelperCliRpcSocketClose(int socket) {
   SocketCloseParam request;
   CommAttribute attr;
 
-  /* socket is idx */
-  uni_pthread_mutex_lock(g_mutex);
-  g_socks[socket].status  = SOCK_INIT_IDLE;
-  g_socks[socket].sock_fd = -1;
-  uni_pthread_mutex_unlock(g_mutex);
-
-  request.sock_fd = socket;
+  request.sock_fd = g_socks[socket].sock_fd;
   attr.reliable = true;
   int ret = CommProtocolPacketAssembleAndSend(CHNL_MSG_NET_SOCKET_CLIENT_CLOSE,
                                               (char *)&request,
                                               sizeof(request),
                                               &attr);
+  if (ret != 0) {
+    LOGW(TAG, "transmit failed");
+  } else {
+    /* socket is idx */
+    uni_pthread_mutex_lock(g_mutex);
+    g_socks[socket].status  = SOCK_INIT_IDLE;
+    g_socks[socket].sock_fd = -1;
+    uni_pthread_mutex_unlock(g_mutex);
+  }
+
+  return ret;
+}
+
+int NetHelperCliRpcSocketConnect(int socket, const char* host, int port) {
+  int len = sizeof(SocketConnParam) + strlen(host) + 1;
+  SocketConnParam *request = (SocketConnParam *)uni_malloc(len);
+  request->port = port;
+  request->sock_fd = g_socks[socket].sock_fd;
+  strcpy((char *)request->host, host);
+
+  LOGT(TAG, "connect fd=%d, host=%s, port=%d", request->sock_fd, request->host, request->port);
+
+  CommAttribute attr;
+  int ret = CommProtocolPacketAssembleAndSend(CHNL_MSG_NET_SOCKET_CLIENT_CONN,
+                                              (char *)request,
+                                              len,
+                                              &attr);
+  uni_free(request);
+
   if (ret != 0) {
     LOGW(TAG, "transmit failed");
   }
@@ -212,7 +235,7 @@ int NetHelperCliRpcRecv(int socket, void *mem, uint32_t len, int flags) {
 int NetHelperCliRpcSetSockOption(int socket, int level, int optname,
                                  const void *optval, uint32_t optlen) {
   SocketOptionParam *request = uni_malloc(sizeof(SocketOptionParam) + optlen);
-  request->sock_fd = socket;
+  request->sock_fd = g_socks[socket].sock_fd;
   request->level = level;
   request->optname = optname;
   request->optlen = optlen;
@@ -328,7 +351,7 @@ int NetHelperCliRpcConnectWebSocket(const char* host, int port) {
 
   /* block mode */
   uni_sem_wait(g_socks[idx].sem);
-  return g_socks[idx].sock_fd;
+  return idx;
 }
 
 static void _client_do_socket_init_response(char *packet, int len) {

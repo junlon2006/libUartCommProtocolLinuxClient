@@ -61,6 +61,14 @@ int NetHelperCliRpcSocketInit(int domain, int type, int protocol);
 int NetHelperCliRpcSocketClose(int socket);
 
 /**
+ * @brief rpc client socket connect
+ * @param socket
+ * @param host
+ * @param port
+ */
+int NetHelperCliRpcSocketConnect(int socket, const char* host, int port);
+
+/**
  * @brief rpc client send
  * @param socket
  * @param data

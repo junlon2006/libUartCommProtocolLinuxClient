@@ -57,6 +57,9 @@ typedef enum {
 
   CHNL_MSG_NET_SOCKET_CLIENT_WEBSOCK_CONN,
   CHNL_MSG_NET_SOCKET_SERVER_WEBSOCK_CONN,
+
+  CHNL_MSG_NET_SOCKET_CLIENT_CONN,
+  CHNL_MSG_NET_SOCKET_SERVER_CONN,
 } NetworkMessageType;
 
 typedef struct {
@@ -129,6 +132,12 @@ typedef struct {
   int session_id;
   int sock_fd;
 } PACKED WebSocketInitResponse;
+
+typedef struct {
+  int sock_fd;
+  int port;
+  int host[0];
+} PACKED SocketConnParam;
 
 #ifdef __cplusplus
 }

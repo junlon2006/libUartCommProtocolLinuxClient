@@ -42,10 +42,13 @@
 #define true           1
 
 static void _server_do_socket_init(char *packet, int len) {
+  LOGT(TAG, "recv sock init event");
   SocketInitParam *request = (SocketInitParam *)packet;
   SocketInitResponse response;
   response.session_id = request->session_id;
   response.sock_fd    = socket(request->domain, request->type, request->protocol);
+
+  LOGT(TAG, "socket inited, fd=%d, session_id=%d", response.sock_fd, request->session_id);
 
   CommAttribute attr;
   attr.reliable = true;
@@ -60,8 +63,8 @@ static void _server_do_socket_init(char *packet, int len) {
 
 static void _server_do_socket_close(char *packet, int len) {
   SocketCloseParam *request = (SocketCloseParam *)packet;
-  close(request->sock_fd);
   LOGT(TAG, "server do socket close[%d]", request->sock_fd);
+  close(request->sock_fd);
 }
 
 static void _server_do_socket_send(char *packet, int len) {
@@ -238,6 +241,43 @@ static void _server_do_socket_websock_connect(char *packet, int len) {
   }
 }
 
+static void _server_do_socket_socket_connect(char *packet, int len) {
+  SocketConnParam *request = (SocketConnParam *)packet;
+
+  struct addrinfo hints;
+  struct addrinfo *result;
+  struct addrinfo *node;
+  char str_port[16] = {0};
+  const char* host = packet + sizeof(SocketConnParam);
+  snprintf(str_port, sizeof(str_port), "%d", request->port);
+
+  memset(&hints, 0, sizeof(hints));
+  hints.ai_addrlen   = 0;
+  hints.ai_canonname = NULL;
+  hints.ai_addr      = NULL;
+  hints.ai_next      = NULL;
+  hints.ai_flags     = AI_PASSIVE;
+  hints.ai_family    = AF_INET;
+  hints.ai_socktype  = SOCK_STREAM;
+  hints.ai_protocol  = IPPROTO_IP;
+
+  if (0 != getaddrinfo(host, str_port, &hints, &result)) {
+    LOGW(TAG, "getaddr info failed, host=%s, port=%d", host, request->port);
+    return;
+  }
+
+  for (node = result; node != NULL; node = node->ai_next) {
+    if (-1 != connect(request->sock_fd, node->ai_addr, node->ai_addrlen)) {
+      LOGT(TAG, "connect success. host=%s, port=%d, fd=%d", host, request->port, request->sock_fd);
+      break;
+    } else {
+      LOGW(TAG, "connect failed. host=%s, port=%d, fd=%d", host, request->port, request->sock_fd);
+    }
+  }
+
+  freeaddrinfo(result);
+}
+
 int NetHelperSerRpcReceiveCommProtocolPacket(CommPacket *packet) {
   switch (packet->cmd) {
     case CHNL_MSG_NET_SOCKET_CLIENT_INIT:
@@ -267,8 +307,12 @@ int NetHelperSerRpcReceiveCommProtocolPacket(CommPacket *packet) {
     case CHNL_MSG_NET_SOCKET_CLIENT_WEBSOCK_CONN:
       _server_do_socket_websock_connect(packet->payload, packet->payload_len);
       break;
+    case CHNL_MSG_NET_SOCKET_CLIENT_CONN:
+      _server_do_socket_socket_connect(packet->payload, packet->payload_len);
+      break;
 
     default:
+      LOGW(TAG, "not net helper event");
       return -1;
   }
 

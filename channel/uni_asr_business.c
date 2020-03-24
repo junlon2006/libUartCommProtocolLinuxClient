@@ -106,7 +106,6 @@ static int _challenge_pack_ack(char *packet, int len) {
 
 static int _noise_reduction_raw_data(char *packet, int len) {
   LOGD(TAG, "receive noise reduction raw data");
-
   AsrBusNoiseReductionPcmData *data = (AsrBusNoiseReductionPcmData *)packet;
   static int fd = -1;
   if (-1 == fd) {
@@ -168,6 +167,7 @@ int AsrBusReceiveCommProtocolPacket(CommPacket *packet) {
       _pull_noise_reduction_data_request(packet->payload, packet->payload_len);
       break;
     default:
+      LOGW(TAG, "not asr buisness event");
       return -1;
   }
 

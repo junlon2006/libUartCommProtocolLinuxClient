@@ -15,7 +15,7 @@
 
 static void _comm_recv_packet_handler(CommPacket *packet) {
   LOGD(TAG, "recv packet, cmd=%d, len=%d", packet->cmd, packet->payload_len);
-  AsrBusReceiveCommProtocolPacket(packet);
+  ChnlReceiveCommProtocolPacket(packet);
 }
 
 /* 唤醒模式 */
