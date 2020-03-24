@@ -63,8 +63,8 @@ static void _server_do_socket_init(char *packet, int len) {
 
 static void _server_do_socket_close(char *packet, int len) {
   SocketCloseParam *request = (SocketCloseParam *)packet;
-  LOGT(TAG, "server do socket close[%d]", request->sock_fd);
   close(request->sock_fd);
+  LOGT(TAG, "server do socket close[%d]", request->sock_fd);
 }
 
 static void _server_do_socket_send(char *packet, int len) {
@@ -78,6 +78,9 @@ static void _server_do_socket_recv(char *packet, int len) {
   char *recv_buf = (char *)uni_malloc(request->len);
 
   int recv_len = recv(request->sock_fd, recv_buf, request->len, request->flags);
+  LOGT(TAG, "fd=%d, request len=%d, recv len=%d, flags=%d, recv=%s", request->sock_fd, request->len,
+       recv_len, request->flags, recv_buf);
+
   recv_len = uni_max(recv_len, 0);
 
   SocketRecvResponse *response = uni_malloc(sizeof(SocketRecvResponse) + recv_len);
