@@ -28,7 +28,7 @@
 
 #include <unistd.h>
 
-#define TAG           "net_helper"
+#define TAG           "net_helper_cli"
 #define FD_SIZE_MAX   (32)
 
 typedef enum {
@@ -47,6 +47,7 @@ typedef struct {
   int       recv_len;
   int       readable;
   int       writeable;
+  int       conn_ret;
 } SocketResource;
 
 static SocketResource g_socks[FD_SIZE_MAX] = {0};
@@ -167,9 +168,11 @@ int NetHelperCliRpcSocketConnect(int socket, const char* host, int port) {
   request->sock_fd = g_socks[socket].sock_fd;
   strcpy((char *)request->host, host);
 
-  LOGT(TAG, "connect fd=%d, host=%s, port=%d", request->sock_fd, request->host, request->port);
+  LOGT(TAG, "connect fd=%d, host=%s, port=%d", request->sock_fd,
+       request->host, request->port);
 
   CommAttribute attr;
+  attr.reliable = true;
   int ret = CommProtocolPacketAssembleAndSend(CHNL_MSG_NET_SOCKET_CLIENT_CONN,
                                               (char *)request,
                                               len,
@@ -178,14 +181,18 @@ int NetHelperCliRpcSocketConnect(int socket, const char* host, int port) {
 
   if (ret != 0) {
     LOGW(TAG, "transmit failed");
+    return -1;
   }
 
-  return ret;
+  /* block mode, issue when peer death */
+  uni_sem_wait(g_socks[socket].sem);
+  return g_socks[socket].conn_ret;
 }
 
 int NetHelperCliRpcSend(int socket, const void *data, uint32_t size, int flags) {
   /* donnot check status now */
-  SocketSendParam *request = (SocketSendParam *)uni_malloc(sizeof(SocketSendParam) + size);
+  SocketSendParam *request;
+  request          = (SocketSendParam *)uni_malloc(sizeof(SocketSendParam) + size);
   request->sock_fd = g_socks[socket].sock_fd;
   request->flags   = flags;
   request->size    = size;
@@ -373,6 +380,8 @@ static void _client_do_socket_init_response(char *packet, int len) {
       uni_pthread_mutex_lock(g_mutex);
       g_socks[i].sock_fd = response->sock_fd;
       g_socks[i].status = SOCK_INIT_DONE;
+
+      LOGT(TAG, "fd=%d, session_id=%d", g_socks[i].sock_fd, g_socks[i].session_id);
       uni_pthread_mutex_unlock(g_mutex);
 
       uni_sem_post(g_socks[i].sem);
@@ -389,10 +398,13 @@ static void _client_do_socket_recv_response(char *packet, int len) {
   for (i = 0; i < FD_SIZE_MAX; i++) {
     if (g_socks[i].status == SOCK_INIT_DONE &&
         g_socks[i].sock_fd == response->sock_fd) {
-      g_socks[i].recv_len = response->len;
+      LOGD(TAG, "recv data. len=%d, fd=%d", response->len, response->sock_fd);
 
+      g_socks[i].recv_len = response->len;
       if (response->len > 0) {
-        memcpy(g_socks[i].recv_buf, packet + sizeof(SocketRecvResponse), response->len);
+        memcpy(g_socks[i].recv_buf,
+               packet + sizeof(SocketRecvResponse),
+               response->len);
       }
 
       uni_sem_post(g_socks[i].sem);
@@ -430,11 +442,29 @@ static void _client_do_socket_readable_response(char *packet, int len) {
 }
 
 static void _client_do_socket_websock_connect_response(char *packet, int len) {
-  int i;
   WebSocketInitResponse *response = (WebSocketInitResponse *)packet;
+  int i;
+  //TODO handle error
   for (i = 0; i < FD_SIZE_MAX; i++) {
     if (g_socks[i].session_id == response->session_id) {
+      uni_pthread_mutex_lock(g_mutex);
       g_socks[i].sock_fd = response->sock_fd;
+      g_socks[i].status = SOCK_INIT_DONE;
+      uni_pthread_mutex_unlock(g_mutex);
+
+      uni_sem_post(g_socks[i].sem);
+      return;
+    }
+  }
+}
+
+static void _client_do_socket_connect_response(char *packet, int len) {
+  SocketConnResponse *response = (SocketConnResponse *)packet;
+  int i;
+  for (i = 0; i < FD_SIZE_MAX; i++) {
+    if (g_socks[i].status == SOCK_INIT_DONE &&
+        g_socks[i].sock_fd == response->sock_fd) {
+      g_socks[i].conn_ret = response->ret;
 
       uni_sem_post(g_socks[i].sem);
       return;
@@ -458,6 +488,9 @@ int NetHelperCliRpcReceiveCommProtocolPacket(CommPacket *packet) {
       break;
     case CHNL_MSG_NET_SOCKET_SERVER_WEBSOCK_CONN:
       _client_do_socket_websock_connect_response(packet->payload, packet->payload_len);
+      break;
+    case CHNL_MSG_NET_SOCKET_SERVER_CONN:
+      _client_do_socket_connect_response(packet->payload, packet->payload_len);
       break;
     default:
       return -1;

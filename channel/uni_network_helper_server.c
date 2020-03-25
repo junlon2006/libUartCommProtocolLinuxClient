@@ -35,20 +35,17 @@
 #include <stdio.h>
 #include <fcntl.h>
 
-#define TAG            "net_helper"
+#define TAG            "net_helper_ser"
 #define uni_malloc     malloc
 #define uni_free       free
 #define uni_max(a, b)  (a > b ? a : b)
 #define true           1
 
 static void _server_do_socket_init(char *packet, int len) {
-  LOGT(TAG, "recv sock init event");
   SocketInitParam *request = (SocketInitParam *)packet;
   SocketInitResponse response;
   response.session_id = request->session_id;
   response.sock_fd    = socket(request->domain, request->type, request->protocol);
-
-  LOGT(TAG, "socket inited, fd=%d, session_id=%d", response.sock_fd, request->session_id);
 
   CommAttribute attr;
   attr.reliable = true;
@@ -69,7 +66,7 @@ static void _server_do_socket_close(char *packet, int len) {
 
 static void _server_do_socket_send(char *packet, int len) {
   SocketSendParam *request = (SocketSendParam *)packet;
-  send(request->sock_fd, (char *)request + sizeof(*request), request->size, request->flags);
+  send(request->sock_fd, packet + sizeof(*request), request->size, request->flags);
   LOGT(TAG, "server do socket send[%d]", request->size);
 }
 
@@ -78,12 +75,9 @@ static void _server_do_socket_recv(char *packet, int len) {
   char *recv_buf = (char *)uni_malloc(request->len);
 
   int recv_len = recv(request->sock_fd, recv_buf, request->len, request->flags);
-  LOGT(TAG, "fd=%d, request len=%d, recv len=%d, flags=%d, recv=%s", request->sock_fd, request->len,
-       recv_len, request->flags, recv_buf);
+  int alloc_len = uni_max(recv_len, 0) + sizeof(SocketRecvResponse);
 
-  recv_len = uni_max(recv_len, 0);
-
-  SocketRecvResponse *response = uni_malloc(sizeof(SocketRecvResponse) + recv_len);
+  SocketRecvResponse *response = uni_malloc(alloc_len);
   response->sock_fd = request->sock_fd;
   response->len     = recv_len;
   if (recv_len > 0) {
@@ -94,7 +88,7 @@ static void _server_do_socket_recv(char *packet, int len) {
   attr.reliable = true;
   int ret = CommProtocolPacketAssembleAndSend(CHNL_MSG_NET_SOCKET_SERVER_RECV,
                                               (char *)response,
-                                              sizeof(SocketRecvResponse) + recv_len,
+                                              alloc_len,
                                               &attr);
   uni_free(recv_buf);
   uni_free(response);
@@ -190,7 +184,7 @@ static int _websock_connect(const char *host, int port) {
   hints.ai_canonname = NULL;
   hints.ai_addr      = NULL;
   hints.ai_next      = NULL;
-  hints.ai_flags     = 0x01; //AI_PASSIVE
+  hints.ai_flags     = AI_PASSIVE;
   hints.ai_family    = AF_INET;
   hints.ai_socktype  = SOCK_STREAM;
   hints.ai_protocol  = IPPROTO_IP;
@@ -247,6 +241,7 @@ static void _server_do_socket_websock_connect(char *packet, int len) {
 static void _server_do_socket_socket_connect(char *packet, int len) {
   SocketConnParam *request = (SocketConnParam *)packet;
 
+  int ret = -1;
   struct addrinfo hints;
   struct addrinfo *result;
   struct addrinfo *node;
@@ -266,19 +261,38 @@ static void _server_do_socket_socket_connect(char *packet, int len) {
 
   if (0 != getaddrinfo(host, str_port, &hints, &result)) {
     LOGW(TAG, "getaddr info failed, host=%s, port=%d", host, request->port);
-    return;
+    goto L_ERROR;
   }
 
   for (node = result; node != NULL; node = node->ai_next) {
     if (-1 != connect(request->sock_fd, node->ai_addr, node->ai_addrlen)) {
-      LOGT(TAG, "connect success. host=%s, port=%d, fd=%d", host, request->port, request->sock_fd);
+      LOGT(TAG, "connect success. host=%s, port=%d, fd=%d", host,
+           request->port, request->sock_fd);
+      ret = 0;
       break;
-    } else {
-      LOGW(TAG, "connect failed. host=%s, port=%d, fd=%d", host, request->port, request->sock_fd);
     }
+
+    LOGW(TAG, "connect failed. host=%s, port=%d, fd=%d", host, request->port,
+         request->sock_fd);
   }
 
   freeaddrinfo(result);
+
+  SocketConnResponse response;
+
+L_ERROR:
+  response.sock_fd = request->sock_fd;
+  response.ret = ret;
+
+  CommAttribute attr;
+  attr.reliable = true;
+  ret = CommProtocolPacketAssembleAndSend(CHNL_MSG_NET_SOCKET_SERVER_CONN,
+                                          (char *)&response,
+                                          sizeof(response),
+                                          &attr);
+  if (ret != 0) {
+    LOGW(TAG, "transmit failed");
+  }
 }
 
 int NetHelperSerRpcReceiveCommProtocolPacket(CommPacket *packet) {
@@ -315,7 +329,6 @@ int NetHelperSerRpcReceiveCommProtocolPacket(CommPacket *packet) {
       break;
 
     default:
-      LOGW(TAG, "not net helper event");
       return -1;
   }
 

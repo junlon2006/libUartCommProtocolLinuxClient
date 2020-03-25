@@ -167,7 +167,6 @@ int AsrBusReceiveCommProtocolPacket(CommPacket *packet) {
       _pull_noise_reduction_data_request(packet->payload, packet->payload_len);
       break;
     default:
-      LOGW(TAG, "not asr buisness event");
       return -1;
   }
 

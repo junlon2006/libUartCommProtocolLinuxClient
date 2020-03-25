@@ -139,6 +139,11 @@ typedef struct {
   int host[0];
 } PACKED SocketConnParam;
 
+typedef struct {
+  int sock_fd;
+  int ret;
+} PACKED SocketConnResponse;
+
 #ifdef __cplusplus
 }
 #endif
