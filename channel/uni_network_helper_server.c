@@ -34,6 +34,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <fcntl.h>
+#include <errno.h>
 
 #define TAG            "net_helper_ser"
 #define uni_malloc     malloc
@@ -46,6 +47,7 @@ static void _server_do_socket_init(char *packet, int len) {
   SocketInitResponse response;
   response.session_id = request->session_id;
   response.sock_fd    = socket(request->domain, request->type, request->protocol);
+  response.err_code   = (response.sock_fd == -1 ? errno : 0);
 
   CommAttribute attr;
   attr.reliable = true;
@@ -78,8 +80,9 @@ static void _server_do_socket_recv(char *packet, int len) {
   int alloc_len = uni_max(recv_len, 0) + sizeof(SocketRecvResponse);
 
   SocketRecvResponse *response = uni_malloc(alloc_len);
-  response->sock_fd = request->sock_fd;
-  response->len     = recv_len;
+  response->sock_fd  = request->sock_fd;
+  response->len      = recv_len;
+  response->err_code = (recv_len == -1 ? errno : 0);
   if (recv_len > 0) {
     memcpy(response->data, recv_buf, recv_len);
   }
@@ -100,16 +103,42 @@ static void _server_do_socket_recv(char *packet, int len) {
 
 static void _server_do_socket_setoption(char *packet, int len) {
   SocketOptionParam *request = (SocketOptionParam *)packet;
-  setsockopt(request->sock_fd, request->level, request->optname,
-             request->optlen == 0 ? NULL : packet + sizeof(SocketOptionParam),
-             request->optlen);
-  LOGT(TAG, "server do socket set option");
+  SocketOptionResponse response;
+  int ret;
+  ret = setsockopt(request->sock_fd, request->level, request->optname,
+                   request->optlen == 0 ? NULL : packet + sizeof(SocketOptionParam),
+                   request->optlen);
+  response.ret      = ret;
+  response.err_code = (ret == -1 ? errno : 0);
+  response.sock_fd  = request->sock_fd;
+
+  CommAttribute attr;
+  attr.reliable = true;
+  ret = CommProtocolPacketAssembleAndSend(CHNL_MSG_NET_SOCKET_SERVER_SETOPTION,
+                                          (char *)&response,
+                                          sizeof(response),
+                                          &attr);
+  if (ret != 0) {
+    LOGT(TAG, "server do socket set option transmit failed, err=%d", ret);
+  }
 }
 
 static void _server_do_socket_fcntl(char *packet, int len) {
   SocketFcntlParam *request = (SocketFcntlParam *)packet;
-  fcntl(request->sock_fd, request->cmd, request->val);
-  LOGT(TAG, "server do socket fcntl");
+  SocketFcntlResponse response;
+  response.ret      = fcntl(request->sock_fd, request->cmd, request->val);
+  response.err_code = (response.ret == -1 ? errno : 0);
+  response.sock_fd  = request->sock_fd;
+
+  CommAttribute attr;
+  attr.reliable = true;
+  int ret = CommProtocolPacketAssembleAndSend(CHNL_MSG_NET_SOCKET_SERVER_FCNTL,
+                                              (char *)&response,
+                                              sizeof(response),
+                                              &attr);
+  if (ret != 0) {
+    LOGT(TAG, "server do socket fcntl transmit failed, err=%d", ret);
+  }
 }
 
 static void _server_select(char *packet, int len, int msg_type) {
@@ -164,11 +193,13 @@ static void _server_select(char *packet, int len, int msg_type) {
 static void _server_do_socket_select_read(char *packet, int len) {
   LOGT(TAG, "server do socket select read");
   _server_select(packet, len, CHNL_MSG_NET_SOCKET_SERVER_SELECT_READ);
+  LOGD(TAG, "server do socket select read done");
 }
 
 static void _server_do_socket_select_write(char *packet, int len) {
   LOGT(TAG, "server do socket select write");
   _server_select(packet, len, CHNL_MSG_NET_SOCKET_SERVER_SELECT_WRITE);
+  LOGD(TAG, "server do socket select write done");
 }
 
 static int _websock_connect(const char *host, int port) {
@@ -281,8 +312,9 @@ static void _server_do_socket_socket_connect(char *packet, int len) {
   SocketConnResponse response;
 
 L_ERROR:
-  response.sock_fd = request->sock_fd;
-  response.ret = ret;
+  response.sock_fd  = request->sock_fd;
+  response.ret      = ret;
+  response.err_code = (ret == -1 ? errno : 0);
 
   CommAttribute attr;
   attr.reliable = true;

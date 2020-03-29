@@ -60,6 +60,8 @@ typedef enum {
 
   CHNL_MSG_NET_SOCKET_CLIENT_CONN,
   CHNL_MSG_NET_SOCKET_SERVER_CONN,
+
+  CHNL_MSG_NET_CNT,
 } NetworkMessageType;
 
 typedef struct {
@@ -72,6 +74,7 @@ typedef struct {
 typedef struct {
   int session_id;
   int sock_fd;
+  int err_code;
 } PACKED SocketInitResponse;
 
 typedef struct {
@@ -87,6 +90,12 @@ typedef struct {
 
 typedef struct {
   int sock_fd;
+  int ret;
+  int err_code;
+} PACKED SocketSendResponse;
+
+typedef struct {
+  int sock_fd;
   int len;
   int flags;
 } PACKED SocketRecvParam;
@@ -94,6 +103,7 @@ typedef struct {
 typedef struct {
   int  sock_fd;
   int  len;
+  int  err_code;
   char data[0];
 } PACKED SocketRecvResponse;
 
@@ -107,9 +117,21 @@ typedef struct {
 
 typedef struct {
   int sock_fd;
+  int ret;
+  int err_code;
+} PACKED SocketOptionResponse;
+
+typedef struct {
+  int sock_fd;
   int cmd;
   int val;
 } PACKED SocketFcntlParam;
+
+typedef struct {
+  int sock_fd;
+  int ret;
+  int err_code;
+} PACKED SocketFcntlResponse;
 
 typedef struct {
   int sock_fd;
@@ -142,6 +164,7 @@ typedef struct {
 typedef struct {
   int sock_fd;
   int ret;
+  int err_code;
 } PACKED SocketConnResponse;
 
 #ifdef __cplusplus
