@@ -68,8 +68,20 @@ static void _server_do_socket_close(char *packet, int len) {
 
 static void _server_do_socket_send(char *packet, int len) {
   SocketSendParam *request = (SocketSendParam *)packet;
-  send(request->sock_fd, packet + sizeof(*request), request->size, request->flags);
-  LOGT(TAG, "server do socket send[%d]", request->size);
+  SocketSendResponse response;
+  int ret;
+  ret = send(request->sock_fd, packet + sizeof(*request), request->size, request->flags);
+  response.sock_fd = request->sock_fd;
+  response.ret = ret;
+  response.err_code = (ret == -1 ? errno : 0);
+
+  CommAttribute attr;
+  attr.reliable = true;
+  ret = CommProtocolPacketAssembleAndSend(CHNL_MSG_NET_SOCKET_SERVER_SEND,
+                                          (char *)&response,
+                                          sizeof(response),
+                                          &attr);
+  LOGT(TAG, "server do socket send[%d]", response.ret);
 }
 
 static void _server_do_socket_recv(char *packet, int len) {
