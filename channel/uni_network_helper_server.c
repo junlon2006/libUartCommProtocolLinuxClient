@@ -71,8 +71,8 @@ static void _server_do_socket_send(char *packet, int len) {
   SocketSendResponse response;
   int ret;
   ret = send(request->sock_fd, packet + sizeof(*request), request->size, request->flags);
-  response.sock_fd = request->sock_fd;
-  response.ret = ret;
+  response.sock_fd  = request->sock_fd;
+  response.ret      = ret;
   response.err_code = (ret == -1 ? errno : 0);
 
   CommAttribute attr;
