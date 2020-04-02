@@ -29,6 +29,7 @@ extern "C" {
 #endif
 
 #include "uni_channel.h"
+#include "uni_network_helper.h"
 
 /**
  * @brief comm protocol packet hook
@@ -36,6 +37,13 @@ extern "C" {
  * @return 0 success, -1 failed
  */
 int NetHelperSerRpcReceiveCommProtocolPacket(CommPacket *packet);
+
+/**
+ * @brief broadcast network status
+ * @param status
+ * @return 0 success, -1 failed
+ */
+int NetHelperSerRpcNetStatusBroadCast(NetWorkStatus status);
 
 #ifdef __cplusplus
 }

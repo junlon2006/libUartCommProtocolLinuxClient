@@ -62,8 +62,20 @@ static void _server_do_socket_init(char *packet, int len) {
 
 static void _server_do_socket_close(char *packet, int len) {
   SocketCloseParam *request = (SocketCloseParam *)packet;
-  close(request->sock_fd);
-  LOGT(TAG, "server do socket close[%d]", request->sock_fd);
+  SocketCloseResponse response;
+  response.ret      = close(request->sock_fd);
+  response.sock_fd  = request->sock_fd;
+  response.err_code = (response.ret == -1 ? errno : 0);
+
+  CommAttribute attr;
+  attr.reliable = true;
+  int ret = CommProtocolPacketAssembleAndSend(CHNL_MSG_NET_SOCKET_SERVER_CLOSE,
+                                              (char *)&response,
+                                              sizeof(response),
+                                              &attr);
+  if (ret != 0) {
+    LOGT(TAG, "server do socket close, transmit failed [%d]", ret);
+  }
 }
 
 static void _server_do_socket_send(char *packet, int len) {
@@ -81,7 +93,7 @@ static void _server_do_socket_send(char *packet, int len) {
                                           (char *)&response,
                                           sizeof(response),
                                           &attr);
-  LOGT(TAG, "server do socket send[%d]", response.ret);
+  LOGT(TAG, "server do socket send[%d]", ret);
 }
 
 static void _server_do_socket_recv(char *packet, int len) {
@@ -92,9 +104,9 @@ static void _server_do_socket_recv(char *packet, int len) {
   int alloc_len = uni_max(recv_len, 0) + sizeof(SocketRecvResponse);
 
   SocketRecvResponse *response = uni_malloc(alloc_len);
-  response->sock_fd  = request->sock_fd;
-  response->len      = recv_len;
-  response->err_code = (recv_len == -1 ? errno : 0);
+  response->sock_fd            = request->sock_fd;
+  response->len                = recv_len;
+  response->err_code           = (recv_len == -1 ? errno : 0);
   if (recv_len > 0) {
     memcpy(response->data, recv_buf, recv_len);
   }
@@ -205,13 +217,11 @@ static void _server_select(char *packet, int len, int msg_type) {
 static void _server_do_socket_select_read(char *packet, int len) {
   LOGT(TAG, "server do socket select read");
   _server_select(packet, len, CHNL_MSG_NET_SOCKET_SERVER_SELECT_READ);
-  LOGD(TAG, "server do socket select read done");
 }
 
 static void _server_do_socket_select_write(char *packet, int len) {
   LOGT(TAG, "server do socket select write");
   _server_select(packet, len, CHNL_MSG_NET_SOCKET_SERVER_SELECT_WRITE);
-  LOGD(TAG, "server do socket select write done");
 }
 
 static int _websock_connect(const char *host, int port) {
@@ -339,6 +349,23 @@ L_ERROR:
   }
 }
 
+static void _server_do_network_status_check(char *packet, int len) {
+  NetWorkStatusInfo response;
+
+  //TODO network connect check
+  response.status = NET_CONNECTED;
+
+  CommAttribute attr;
+  attr.reliable = true;
+  int ret = CommProtocolPacketAssembleAndSend(CHNL_MSG_NET_STATUS_SERVER_RESPONSE,
+                                              (char *)&response,
+                                              sizeof(response),
+                                              &attr);
+  if (ret != 0) {
+    LOGW(TAG, "transmit failed. err=%d", ret);
+  }
+}
+
 int NetHelperSerRpcReceiveCommProtocolPacket(CommPacket *packet) {
   switch (packet->cmd) {
     case CHNL_MSG_NET_SOCKET_CLIENT_INIT:
@@ -371,6 +398,9 @@ int NetHelperSerRpcReceiveCommProtocolPacket(CommPacket *packet) {
     case CHNL_MSG_NET_SOCKET_CLIENT_CONN:
       _server_do_socket_socket_connect(packet->payload, packet->payload_len);
       break;
+    case CHNL_MSG_NET_STATUS_CLIENT_REQUEST:
+      _server_do_network_status_check(packet->payload, packet->payload_len);
+      break;
 
     default:
       return -1;
@@ -379,3 +409,19 @@ int NetHelperSerRpcReceiveCommProtocolPacket(CommPacket *packet) {
   return 0;
 }
 
+int NetHelperSerRpcNetStatusBroadCast(NetWorkStatus status) {
+  NetWorkStatusInfo request;
+  request.status = status;
+
+  CommAttribute attr;
+  attr.reliable = true;
+  int ret = CommProtocolPacketAssembleAndSend(CHNL_MSG_NET_STATUS_SERVER_BROADCAST_REQUEST,
+                                              (char *)&request,
+                                              sizeof(request),
+                                              &attr);
+  if (ret != 0) {
+    LOGW(TAG, "transmit failed. err=%d", ret);
+  }
+
+  return ret;
+}

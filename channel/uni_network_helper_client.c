@@ -57,10 +57,15 @@ typedef struct {
   int       socksetopt_errno;
   int       fnctl_ret;
   int       fnctl_errno;
+  int       close_ret;
+  int       close_errno;
 } SocketResource;
 
 static SocketResource g_socks[FD_SIZE_MAX] = {0};
 static uni_mutex_t    g_mutex = NULL;
+static uni_sem_t      g_net_status_sem;
+static NetWorkStatus  g_net_status = NET_DISCONNECTED;
+static void           (*g_net_status_change) (NetWorkStatus status) = NULL;
 
 static int _get_sem_index_by_client_msg(int type) {
   return (type - NETWORK_HELPER_MESSAGE_BASE) >> 1;
@@ -70,14 +75,15 @@ static void _sock_fds_init() {
   int i, j;
   for (i = 0; i < FD_SIZE_MAX; i++) {
     g_socks[i].session_id = -1;
-    g_socks[i].status = SOCK_INIT_IDLE;
-    g_socks[i].sock_fd = -1;
+    g_socks[i].status     = SOCK_INIT_IDLE;
+    g_socks[i].sock_fd    = -1;
 
     for (j = 0; j < (CHNL_MSG_NET_CNT - NETWORK_HELPER_MESSAGE_BASE) >> 1; j++) {
       uni_sem_init(&g_socks[i].sem[j], 0);
     }
   }
 
+  uni_sem_init(&g_net_status_sem, 0);
   uni_pthread_mutex_init(&g_mutex);
 }
 
@@ -99,6 +105,29 @@ static int _get_fds_idx() {
 
   LOGT(TAG, "find idle sock idx=%d", idx);
   return idx;
+}
+
+int NetHelperCliRpcNetStatusChangeHookRegister(void (*hook) (NetWorkStatus status)) {
+  g_net_status_change = hook;
+  return 0;
+}
+
+int NetHelperCliRpcNetStatusGet(void) {
+  CommAttribute attr;
+  attr.reliable = true;
+
+  int ret = CommProtocolPacketAssembleAndSend(CHNL_MSG_NET_STATUS_CLIENT_REQUEST,
+                                              NULL,
+                                              0,
+                                              &attr);
+  if (ret != 0) {
+    LOGW(TAG, "transmit failed. err=%d", ret);
+    return -1;
+  }
+
+  uni_sem_wait(g_net_status_sem);
+  LOGT(TAG, "net status=%d", g_net_status);
+  return g_net_status;
 }
 
 int NetHelperCliRpcSocketInit(int domain, int type, int protocol) {
@@ -159,22 +188,26 @@ int NetHelperCliRpcSocketClose(int socket) {
                                               &attr);
   if (ret != 0) {
     LOGW(TAG, "transmit failed");
-  } else {
-    /* socket is idx */
-    uni_pthread_mutex_lock(g_mutex);
-    g_socks[socket].status  = SOCK_INIT_IDLE;
-    g_socks[socket].sock_fd = -1;
-    uni_pthread_mutex_unlock(g_mutex);
+    return -1;
   }
 
-  return ret;
+  int sem_idx = _get_sem_index_by_client_msg(CHNL_MSG_NET_SOCKET_CLIENT_CLOSE);
+  uni_sem_wait(g_socks[socket].sem[sem_idx]);
+
+  /* socket is idx */
+  uni_pthread_mutex_lock(g_mutex);
+  g_socks[socket].status  = SOCK_INIT_IDLE;
+  g_socks[socket].sock_fd = -1;
+  uni_pthread_mutex_unlock(g_mutex);
+
+  return g_socks[socket].close_ret;
 }
 
 int NetHelperCliRpcSocketConnect(int socket, const char* host, int port) {
   int len = sizeof(SocketConnParam) + strlen(host) + 1;
   SocketConnParam *request = (SocketConnParam *)uni_malloc(len);
-  request->port    = port;
-  request->sock_fd = g_socks[socket].sock_fd;
+  request->port            = port;
+  request->sock_fd         = g_socks[socket].sock_fd;
   strcpy((char *)request->host, host);
 
   LOGT(TAG, "connect fd=%d, host=%s, port=%d", request->sock_fd,
@@ -219,6 +252,7 @@ int NetHelperCliRpcSend(int socket, const void *data, uint32_t size, int flags) 
 
   if (ret != 0) {
     LOGW(TAG, "transmit failed");
+    return -1;
   }
 
   int sem_idx = _get_sem_index_by_client_msg(CHNL_MSG_NET_SOCKET_CLIENT_SEND);
@@ -275,6 +309,7 @@ int NetHelperCliRpcSetSockOption(int socket, int level, int optname,
 
   if (ret != 0) {
     LOGW(TAG, "transmit failed");
+    return -1;
   }
 
   int sem_idx = _get_sem_index_by_client_msg(CHNL_MSG_NET_SOCKET_CLIENT_SETOPTION);
@@ -286,8 +321,8 @@ int NetHelperCliRpcSetSockOption(int socket, int level, int optname,
 int NetHelperCliRpcFcntl(int socket, int cmd, int val) {
   SocketFcntlParam request;
   request.sock_fd = g_socks[socket].sock_fd;
-  request.cmd = cmd;
-  request.val = val;
+  request.cmd     = cmd;
+  request.val     = val;
 
   CommAttribute attr;
   attr.reliable = true;
@@ -297,6 +332,7 @@ int NetHelperCliRpcFcntl(int socket, int cmd, int val) {
                                               &attr);
   if (ret != 0) {
     LOGW(TAG, "transmit failed");
+    return -1;
   }
 
   int sem_idx = _get_sem_index_by_client_msg(CHNL_MSG_NET_SOCKET_CLIENT_FCNTL);
@@ -338,20 +374,22 @@ int NetHelperCliRpcSelectRead(int sock_fd, int timeout) {
 }
 
 int NetHelperCliRpcConnectWebSocket(const char* host, int port) {
+  int idx;
+  int session_id;
   uni_pthread_mutex_lock(g_mutex);
+  {
+    idx = _get_fds_idx();
+    if (idx == -1) {
+      uni_pthread_mutex_unlock(g_mutex);
+      LOGW(TAG, "fds max size=%d, please close some first", FD_SIZE_MAX);
+      return -1;
+    }
 
-  int idx = _get_fds_idx();
-  if (idx == -1) {
-    uni_pthread_mutex_unlock(g_mutex);
-    LOGW(TAG, "fds max size=%d, please close some first", FD_SIZE_MAX);
-    return -1;
+    session_id = _get_current_session_id();
+    g_socks[idx].session_id = session_id;
+    g_socks[idx].status = SOCK_INIT_WAIT;
+    g_socks[idx].sock_fd = -1;
   }
-
-  int session_id = _get_current_session_id();
-  g_socks[idx].session_id = session_id;
-  g_socks[idx].status = SOCK_INIT_WAIT;
-  g_socks[idx].sock_fd = -1;
-
   uni_pthread_mutex_unlock(g_mutex);
 
   int len = sizeof(WebSocketInitParam) + strlen(host) + 1;
@@ -418,7 +456,7 @@ static void _client_do_socket_send_response(char *packet, int len) {
       LOGD(TAG, "send data, fd=%d, len=%d, errno=%d", response->sock_fd,
            response->ret, response->err_code);
 
-      g_socks[i].send_len = response->ret;
+      g_socks[i].send_len   = response->ret;
       g_socks[i].send_errno = response->err_code;
 
       int sem_idx = _get_sem_index_by_client_msg(CHNL_MSG_NET_SOCKET_CLIENT_SEND);
@@ -547,6 +585,37 @@ static void _client_do_socket_fcntl_response(char *packet, int len) {
   }
 }
 
+static void _client_do_socket_close_response(char *packet, int len) {
+  SocketCloseResponse *response = (SocketCloseResponse *)packet;
+  int i;
+  for (i = 0; i < FD_SIZE_MAX; i++) {
+    if (g_socks[i].status == SOCK_INIT_DONE &&
+        g_socks[i].sock_fd == response->sock_fd) {
+      g_socks[i].close_ret   = response->ret;
+      g_socks[i].close_errno = response->err_code;
+
+      int sem_idx = _get_sem_index_by_client_msg(CHNL_MSG_NET_SOCKET_CLIENT_CLOSE);
+      uni_sem_post(g_socks[i].sem[sem_idx]);
+    }
+  }
+}
+
+static void _client_do_net_status_response(char *packet, int len) {
+  NetWorkStatusInfo *info = (NetWorkStatusInfo *)packet;
+  g_net_status = info->status;
+  uni_sem_post(g_net_status_sem);
+}
+
+static void _client_do_net_status_broadcast(char *packet, int len) {
+  NetWorkStatusInfo *info = (NetWorkStatusInfo *)packet;
+  g_net_status = info->status;
+  LOGT(TAG, "get server broadcast net status=%d", g_net_status);
+
+  if (g_net_status_change) {
+    g_net_status_change(g_net_status);
+  }
+}
+
 int NetHelperCliRpcReceiveCommProtocolPacket(CommPacket *packet) {
   switch (packet->cmd) {
     case CHNL_MSG_NET_SOCKET_SERVER_INIT:
@@ -575,6 +644,15 @@ int NetHelperCliRpcReceiveCommProtocolPacket(CommPacket *packet) {
       break;
     case CHNL_MSG_NET_SOCKET_SERVER_FCNTL:
       _client_do_socket_fcntl_response(packet->payload, packet->payload_len);
+      break;
+    case CHNL_MSG_NET_SOCKET_SERVER_CLOSE:
+      _client_do_socket_close_response(packet->payload, packet->payload_len);
+      break;
+    case CHNL_MSG_NET_STATUS_SERVER_RESPONSE:
+      _client_do_net_status_response(packet->payload, packet->payload_len);
+      break;
+    case CHNL_MSG_NET_STATUS_SERVER_BROADCAST_REQUEST:
+      _client_do_net_status_broadcast(packet->payload, packet->payload_len);
       break;
     default:
       return -1;

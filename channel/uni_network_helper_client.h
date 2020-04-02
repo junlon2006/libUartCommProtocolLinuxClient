@@ -29,6 +29,7 @@ extern "C" {
 #endif
 
 #include "uni_channel.h"
+#include "uni_network_helper.h"
 
 /**
  * @brief net helper client init
@@ -43,6 +44,20 @@ int NetHelperCliInit(void);
  * @return 0 success, -1 failed
  */
 int NetHelperCliRpcReceiveCommProtocolPacket(CommPacket *packet);
+
+/**
+ * @brief get network status
+ * @param void
+ * @return enum NetWorkStatus, -1 failed
+ */
+int NetHelperCliRpcNetStatusGet(void);
+
+/**
+ * @brief net work status change callback
+ * @param hook
+ * @return 0 success, -1 failed
+ */
+int NetHelperCliRpcNetStatusChangeHookRegister(void (*hook) (NetWorkStatus status));
 
 /**
  * @brief rpc client socket request

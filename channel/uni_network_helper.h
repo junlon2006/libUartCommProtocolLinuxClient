@@ -61,8 +61,25 @@ typedef enum {
   CHNL_MSG_NET_SOCKET_CLIENT_CONN,
   CHNL_MSG_NET_SOCKET_SERVER_CONN,
 
+  CHNL_MSG_NET_STATUS_CLIENT_REQUEST,
+  CHNL_MSG_NET_STATUS_SERVER_RESPONSE,
+
+  CHNL_MSG_NET_STATUS_SERVER_BROADCAST_REQUEST,
+  CHNL_MSG_NET_STATUS_CLIENT_RESPONSE,
+
   CHNL_MSG_NET_CNT,
 } NetworkMessageType;
+
+typedef enum {
+  NET_CONNECTED = 0,
+  NET_CONNECTING,
+  NET_CONNECTED_FAILED,
+  NET_DISCONNECTED,
+} NetWorkStatus;
+
+typedef struct {
+  NetWorkStatus status;
+} PACKED NetWorkStatusInfo;
 
 typedef struct {
   int session_id;
@@ -80,6 +97,12 @@ typedef struct {
 typedef struct {
   int sock_fd;
 } PACKED SocketCloseParam;
+
+typedef struct {
+  int sock_fd;
+  int ret;
+  int err_code;
+} PACKED SocketCloseResponse;
 
 typedef struct {
   int      sock_fd;
