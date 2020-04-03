@@ -27,6 +27,8 @@
 #include "uni_asr_business.h"
 #include "uni_network_helper_server.h"
 #include "uni_event_list.h"
+#include "uni_audio_control.h"
+#include "uni_audio_control_server.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -56,6 +58,10 @@ static void _event_list_event_handler(void *event) {
   }
 
   if (0 == AsrBusReceiveCommProtocolPacket(packet)) {
+    return;
+  }
+
+  if (0 == AudioCtrlSerRpcReceiveCommProtocolPacket(packet)) {
     return;
   }
 

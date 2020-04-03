@@ -10,6 +10,7 @@
 #include <errno.h>
 #include <string.h>
 #include <stdlib.h>
+#include <signal.h>
 
 #define TAG "main"
 
@@ -143,6 +144,8 @@ int main(int argc, char *argv[]) {
          "how to find Device: please read reademe.txt");
     return -1;
   }
+
+  signal(SIGPIPE, SIG_IGN);
 
   UartConfig uart_config;
   snprintf(uart_config.device, sizeof(uart_config.device), "%s", argv[1]);

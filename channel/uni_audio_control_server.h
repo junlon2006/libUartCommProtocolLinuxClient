@@ -1,5 +1,5 @@
 /**************************************************************************
- * Copyright (C) 2020-2020  Junlon2006
+ * Copyright (C) 2020-2020  Unisound
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,43 +16,35 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  **************************************************************************
  *
- * Description : uni_channel.h
+ * Description : uni_audio_control_server.h
  * Author      : junlon2006@163.com
- * Date        : 2020.03.10
+ * Date        : 2020.04.01
  *
  **************************************************************************/
-#ifndef CHANNEL_UNI_CHANNEL_H_
-#define CHANNEL_UNI_CHANNEL_H_
+#ifndef SDK_CHANNEL_INC_UNI_AUDIO_CONTROL_SERVER_H_
+#define SDK_CHANNEL_INC_UNI_AUDIO_CONTROL_SERVER_H_
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#include "uni_communication.h"
-#include <inttypes.h>
-
-#define PACKED                       __attribute__ ((packed))
-#define PAYLOAD_LEN                 (2048)
-
-#define LASR_BUSINESS_MESSAGE_BASE  (10000)
-#define NETWORK_HELPER_MESSAGE_BASE (20000)
-#define AUDIO_CONTROL_MESSAGE_BASE  (30000)
-
-/**
- * @brief chnl init
- * @param void
- * @return 0 success, 1 failed
- */
-int ChnlInit(void);
+#include "uni_channel.h"
 
 /**
  * @brief comm protocol packet hook
  * @param packet
+ * @return 0 success, -1 failed
+ */
+int AudioCtrlSerRpcReceiveCommProtocolPacket(CommPacket *packet);
+
+/**
+ * @brief mp3 audio end hook
+ * @param void
  * @return void
  */
-void ChnlReceiveCommProtocolPacket(CommPacket *packet);
+void AudioCtrlMp3PlayerAudioEndCallBack(void);
 
 #ifdef __cplusplus
 }
 #endif
-#endif  // CHANNEL_UNI_CHANNEL_H_
+#endif  //  SDK_CHANNEL_INC_UNI_AUDIO_CONTROL_SERVER_H_
