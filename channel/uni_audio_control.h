@@ -70,8 +70,8 @@ typedef enum {
 } AudioVolumeProcessType;
 
 typedef struct {
-  AudioSourceType type;
-  char            file_name[0];
+  int  type;  //AudioSourceType
+  char file_name[0];
 } PACKED AudioCtrlStartRequest;
 
 typedef struct {
@@ -79,8 +79,8 @@ typedef struct {
 } PACKED AudioCtrlStartResponse;
 
 typedef struct {
-  AudioSourceType type;
-  char            file_name[0];
+  int  type;  //AudioSourceType
+  char file_name[0];
 } PACKED AudioCtrlStopRequest;
 
 typedef struct {
@@ -88,8 +88,8 @@ typedef struct {
 } PACKED AudioCtrlStopResponse;
 
 typedef struct {
-  AudioSourceType type;
-  char            file_name[0];
+  int  type;  //AudioSourceType
+  char file_name[0];
 } PACKED AudioCtrlPauseRequest;
 
 typedef struct {
@@ -97,9 +97,9 @@ typedef struct {
 } PACKED AudioCtrlPauseResponse;
 
 typedef struct {
-  AudioSourceType type;
-  int             offset;
-  char            file_name[0];
+  int  type;  //AudioSourceType
+  int  offset;
+  char file_name[0];
 } PACKED AudioCtrlResumeRequest;
 
 typedef struct {
@@ -116,8 +116,8 @@ typedef struct {
 } PACKED AudioCtrlVolumeResponse;
 
 typedef struct {
-  AudioSourceType type;
-  char            file_name[0];
+  int  type;  //AudioSourceType
+  char file_name[0];
 } PACKED AudioCtrlAudioEndRequest;
 
 typedef void (*AudioEndCallBack)(int type, const char *file_name);
