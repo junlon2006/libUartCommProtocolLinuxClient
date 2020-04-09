@@ -43,8 +43,13 @@ static void _do_start(char *packet, int len) {
   AudioCtrlStartRequest *request = (AudioCtrlStartRequest *)packet;
   int ret = 0;
 
+  LOGT(TAG, "len=%d", len);
+  LOGT(TAG, "url=%s", packet + sizeof(AudioCtrlStartRequest));
+  LOGT(TAG, "type=%d", request->type);
+  LOGT(TAG, "size=%d", sizeof(AudioCtrlStartRequest));
+
   pthread_mutex_lock(&g_lock);
-  strcpy(g_file_name, request->file_name);
+  strcpy(g_file_name, packet + sizeof(AudioCtrlStartRequest));
   g_audio_source_type = request->type;
   pthread_mutex_unlock(&g_lock);
 
@@ -104,6 +109,11 @@ static void _do_resume(char *packet, int len) {
   AudioCtrlResumeRequest *request = (AudioCtrlResumeRequest *)packet;
   int ret = 0;
 
+  pthread_mutex_lock(&g_lock);
+  strcpy(g_file_name, packet + sizeof(AudioCtrlStartRequest));
+  g_audio_source_type = request->type;
+  pthread_mutex_unlock(&g_lock);
+
   AudioCtrlResumeResponse response;
   response.ret = ret;
 
@@ -116,6 +126,8 @@ static void _do_resume(char *packet, int len) {
   if (ret != 0) {
     LOGW(TAG, "transmit failed. err=%d", ret);
   }
+
+  AudioCtrlMp3PlayerAudioEndCallBack();
 }
 
 static void _do_volume(char *packet, int len) {

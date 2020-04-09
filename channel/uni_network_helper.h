@@ -67,6 +67,12 @@ typedef enum {
   CHNL_MSG_NET_STATUS_SERVER_BROADCAST_REQUEST,
   CHNL_MSG_NET_STATUS_CLIENT_RESPONSE,
 
+  CHNL_MSG_NET_SOFTAP_ENABLE_REQUEST,
+  CHNL_MSG_NET_SOFTAP_ENABLE_RESPONSE,
+
+  CHNL_MSG_NET_SOFTAP_DISABLE_REQUEST,
+  CHNL_MSG_NET_SOFTAP_DISABLE_RESPONSE,
+
   CHNL_MSG_NET_CNT,
 } NetworkMessageType;
 
@@ -189,6 +195,16 @@ typedef struct {
   int ret;
   int err_code;
 } PACKED SocketConnResponse;
+
+typedef struct {
+  int ret;
+  int err_code;
+} PACKED SoftApEnableResponse;
+
+typedef struct {
+  int ret;
+  int err_code;
+} PACKED SoftApDisableResponse;
 
 #ifdef __cplusplus
 }

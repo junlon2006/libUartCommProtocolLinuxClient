@@ -147,6 +147,20 @@ int NetHelperCliRpcSelectRead(int sock_fd, int timeout);
  */
 int NetHelperCliRpcConnectWebSocket(const char* host, int port);
 
+/**
+ * @brief rpc client enable softAP mode
+ * @param void
+ * @return 0 success, -1 failed
+ */
+int NetHelperCliRpcSoftApEnable(void);
+
+/**
+ * @brief rpc client disable softAp mode
+ * @param void
+ * @return 0 success, -1 failed
+ */
+int NetHelperCliRpcSoftApDisable(void);
+
 #ifdef __cplusplus
 }
 #endif

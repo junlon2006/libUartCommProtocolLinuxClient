@@ -61,11 +61,17 @@ typedef struct {
   int       close_errno;
 } SocketResource;
 
-static SocketResource g_socks[FD_SIZE_MAX] = {0};
-static uni_mutex_t    g_mutex = NULL;
-static uni_sem_t      g_net_status_sem;
-static NetWorkStatus  g_net_status = NET_DISCONNECTED;
+static SocketResource g_socks[FD_SIZE_MAX]                          = {0};
+static uni_mutex_t    g_mutex                                       = NULL;
+static uni_sem_t      g_net_status_sem                              = NULL;
+static NetWorkStatus  g_net_status                                  = NET_DISCONNECTED;
 static void           (*g_net_status_change) (NetWorkStatus status) = NULL;
+static void           (*g_softAp_netconnect_status) (int status)    = NULL;
+static int            g_softap_enable_ret                           = 0;
+static int            g_softap_enable_errno                         = 0;
+static int            g_softap_disable_ret                          = 0;
+static int            g_softap_disable_errno                        = 0;
+static uni_sem_t      g_softap_sem                                  = NULL;
 
 static int _get_sem_index_by_client_msg(int type) {
   return (type - NETWORK_HELPER_MESSAGE_BASE) >> 1;
@@ -394,8 +400,8 @@ int NetHelperCliRpcConnectWebSocket(const char* host, int port) {
 
   int len = sizeof(WebSocketInitParam) + strlen(host) + 1;
   WebSocketInitParam *request = uni_malloc(len);
-  request->session_id = session_id;
-  request->port = port;
+  request->session_id         = session_id;
+  request->port               = port;
   strcpy(request->host, host);
 
   CommAttribute attr;
@@ -419,6 +425,32 @@ int NetHelperCliRpcConnectWebSocket(const char* host, int port) {
   int sem_idx = _get_sem_index_by_client_msg(CHNL_MSG_NET_SOCKET_CLIENT_WEBSOCK_CONN);
   uni_sem_wait(g_socks[idx].sem[sem_idx]);
   return idx;
+}
+
+int NetHelperCliRpcSoftApEnable(void) {
+  CommAttribute attr;
+  attr.reliable = true;
+
+  int ret = CommProtocolPacketAssembleAndSend(CHNL_MSG_NET_SOFTAP_ENABLE_REQUEST,
+                                              NULL,
+                                              0,
+                                              &attr);
+  if (ret != 0) {
+    LOGW(TAG, "transmit failed");
+    return -1;
+  }
+
+  uni_sem_post(g_softap_sem);
+  return g_softap_enable_ret;
+}
+
+int NetHelperCliRpcSoftApDisable(void) {
+  return 0;
+}
+
+int NetHelperCliRpcSoftApNetworkConnectStatusRegisterHook(void (*hook) (int status)) {
+  g_softAp_netconnect_status = hook;
+  return 0;
 }
 
 static void _client_do_socket_init_response(char *packet, int len) {
