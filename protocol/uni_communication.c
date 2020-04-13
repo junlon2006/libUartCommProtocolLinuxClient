@@ -35,8 +35,8 @@
 
 #define UART_COMM_TAG                 "uart_comm"
 
-#define DEFAULT_PROTOCOL_BUF_SIZE     (16)
-#define PROTOCOL_BUF_GC_TRIGGER_SIZE  (2048 + 32) /* cover protocol header */
+#define DEFAULT_PROTOCOL_BUF_SIZE     (sizeof(struct header))
+#define PROTOCOL_BUF_GC_TRIGGER_SIZE  (1024 + sizeof(struct header))
 #define PROTOCOL_BUF_SUPPORT_MAX_SIZE (8192)
 
 //TODO need refactor, calculate by baud rate
@@ -90,7 +90,7 @@ typedef enum {
   LAYOUT_PAYLOAD_LEN_CRC_HIGH_IDX = 15,
 } CommLayoutIndex;
 
-typedef struct {
+typedef struct header {
   unsigned char  sync[6];   /* must be "uArTcP" */
   CommSequence   sequence;  /* sequence number */
   CommControl    control;   /* header ctrl */
@@ -104,10 +104,11 @@ typedef struct {
 typedef struct {
   CommWriteHandler      on_write;
   CommRecvPacketHandler on_recv_frame;
-  pthread_mutex_t       write_sync_lock;    /* avoid uart device write concurrency*/
+  pthread_mutex_t       write_sync_lock;    /* avoid uart device write concurrency */
   pthread_mutex_t       app_send_sync_lock; /* avoid app send concurrency, out of sequence */
   uni_bool              acked;
   CommSequence          sequence;
+  CommSequence          current_acked_seq;  /* current received sequence */
   char                  *protocol_buffer;
   InterruptHandle       interrupt_handle;
 } CommProtocolBusiness;
@@ -121,6 +122,14 @@ static void _register_write_handler(CommWriteHandler handler) {
 
 static void _unregister_write_handler() {
   g_comm_protocol_business.on_write = NULL;
+}
+
+static void _set_current_acked_seq(CommSequence seq) {
+  g_comm_protocol_business.current_acked_seq = seq;
+}
+
+static CommSequence _get_current_acked_seq() {
+  return g_comm_protocol_business.current_acked_seq;
 }
 
 static void _sync_set(CommProtocolPacket *packet) {
@@ -258,7 +267,7 @@ static uni_bool _is_nacked_packet(CommProtocolPacket *protocol_packet) {
           _is_nacked_set(protocol_packet->control));
 }
 
-static int _wait_ack(CommAttribute *attribute) {
+static int _wait_ack(CommAttribute *attribute, CommProtocolPacket *packet) {
   /* acked process */
   if (NULL == attribute || !attribute->reliable) {
     return 0;
@@ -268,7 +277,8 @@ static int _wait_ack(CommAttribute *attribute) {
                      WAIT_ACK_TIMEOUT_MSEC);
 
   if (!g_comm_protocol_business.acked) {
-    LOGT(UART_COMM_TAG, "wait uart ack timeout");
+    LOGT(UART_COMM_TAG, "wait uart ack timeout. seq=%d, cmd=%d",
+         packet->sequence, packet->cmd);
   }
 
   return g_comm_protocol_business.acked ? 0 : E_UNI_COMM_PAYLOAD_ACK_TIMEOUT;
@@ -284,8 +294,9 @@ static void _packet_free(CommProtocolPacket *packet) {
 }
 
 #define RESENDING  (1)
-static int _resend_status(CommAttribute *attribute, int *resend_times) {
-  int ret = _wait_ack(attribute);
+static int _resend_status(CommAttribute *attribute, int *resend_times,
+                          CommProtocolPacket *packet) {
+  int ret = _wait_ack(attribute, packet);
   if (0 == ret) {
     return 0;
   }
@@ -321,7 +332,7 @@ static int _write_uart(CommProtocolPacket *packet, CommAttribute *attribute) {
                                         (int)_packet_len_get(packet));
       pthread_mutex_unlock(&g_comm_protocol_business.write_sync_lock);
 
-      ret = _resend_status(attribute, &resend_times);
+      ret = _resend_status(attribute, &resend_times, packet);
     } while (RESENDING == ret);
   }
 
@@ -414,7 +425,7 @@ static CommPacket* _packet_disassemble(CommProtocolPacket *protocol_packet) {
 static void _enlarge_protocol_buffer(char **orginal,
                                      CommPayloadLen *orginal_len) {
   char *p;
-  CommPayloadLen new_length = *orginal_len * 2;
+  CommPayloadLen new_length = *orginal_len * 2 + sizeof(struct header); /* cover header */
   p = (char *)uni_malloc(new_length);
   memcpy(p, *orginal, *orginal_len);
   uni_free(*orginal);
@@ -425,7 +436,7 @@ static void _enlarge_protocol_buffer(char **orginal,
 /* small heap memory stays alway, only garbage collection big bins */
 static void _try_garbage_collection_protocol_buffer(char **buffer,
                                                     CommPayloadLen *length) {
-  if (*length >= PROTOCOL_BUF_GC_TRIGGER_SIZE) {
+  if (*length > PROTOCOL_BUF_GC_TRIGGER_SIZE) {
     uni_free(*buffer);
     *buffer = NULL;
     *length = DEFAULT_PROTOCOL_BUF_SIZE;
@@ -479,7 +490,9 @@ static uni_bool _is_duplicate_frame(CommProtocolPacket *protocol_packet) {
   uni_bool duplicate;
   duplicate = (last_recv_packet_seq == (int)protocol_packet->sequence);
   last_recv_packet_seq = protocol_packet->sequence;
-  LOGD(UART_COMM_TAG, "duplicate=%d", duplicate);
+  LOGD(UART_COMM_TAG, "duplicate=%d, seq=%d, cmd=%d, ctrl=%d, len=%d",
+       duplicate, protocol_packet->sequence, protocol_packet->cmd,
+       protocol_packet->control, protocol_packet->payload_len);
   return duplicate;
 }
 
@@ -497,7 +510,11 @@ static void _one_protocol_frame_process(char *protocol_buffer) {
     if (protocol_packet->sequence == _current_sequence_get()) {
       LOGD(UART_COMM_TAG, "recv ack frame");
       _set_acked_sync_flag();
-      InterruptableBreak(g_comm_protocol_business.interrupt_handle);
+      /* one sequence can only break once */
+      if (protocol_packet->sequence != _get_current_acked_seq()) {
+        _set_current_acked_seq(protocol_packet->sequence);
+        InterruptableBreak(g_comm_protocol_business.interrupt_handle);
+      }
     } else {
       LOGD(UART_COMM_TAG, "recv outdated ack frame");
     }
@@ -682,6 +699,7 @@ static void _protocol_business_init() {
   pthread_mutex_init(&g_comm_protocol_business.write_sync_lock, NULL);
   pthread_mutex_init(&g_comm_protocol_business.app_send_sync_lock, NULL);
   g_comm_protocol_business.interrupt_handle = InterruptCreate();
+  _set_current_acked_seq(((CommSequence)-1) >> 1);
 }
 
 static void _try_free_protocol_buffer() {
