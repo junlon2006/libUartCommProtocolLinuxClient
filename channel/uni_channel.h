@@ -34,9 +34,9 @@ extern "C" {
 #define PACKED                       __attribute__ ((packed))
 #define PAYLOAD_LEN                 (2048)
 
-#define LASR_BUSINESS_MESSAGE_BASE  (10000)
-#define NETWORK_HELPER_MESSAGE_BASE (20000)
-#define AUDIO_CONTROL_MESSAGE_BASE  (30000)
+#define LASR_BUSINESS_MESSAGE_BASE  (1000)
+#define NETWORK_HELPER_MESSAGE_BASE (2000)
+#define AUDIO_CONTROL_MESSAGE_BASE  (3000)
 
 /**
  * @brief chnl init
