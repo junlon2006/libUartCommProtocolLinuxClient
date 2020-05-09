@@ -41,10 +41,6 @@
 
 //TODO need refactor, calculate by baud rate
 #define WAIT_ACK_TIMEOUT_MSEC         (200)
-/* make sure ONE_FRAME_BYTE_TIMEOUT_MSEC < WAIT_ACK_TIMEOUT_MSEC
- * otherwise resend cannot work, set
- * WAIT_ACK_TIMEOUT_MSEC = 1.5 * ONE_FRAME_BYTE_TIMEOUT_MSEC */
-#define ONE_FRAME_BYTE_TIMEOUT_MSEC   (2000)
 #define TRY_RESEND_TIMES              (5)
 
 #define uni_min(x, y)                 (x < y ? x : y)
@@ -218,8 +214,7 @@ static void _payload_len_set(CommProtocolPacket *packet, CommPayloadLen payload_
 }
 
 static void _payload_len_crc16_set(CommProtocolPacket *packet) {
-  uint16_t payload_len = _byte2_big_endian_2_u16(packet->payload_len);
-  uint16_t checksum = crc16((const char *)&payload_len, sizeof(CommPayloadLen));
+  uint16_t checksum = crc16((const char *)packet->payload_len, sizeof(CommPayloadLen));
   _u16_2_byte2_big_endian(checksum, packet->payload_len_crc16);
 }
 
@@ -563,33 +558,10 @@ static void _one_protocol_frame_process(char *protocol_buffer) {
   uni_free(packet);
 }
 
-static long _get_clock_time_ms(void) {
-  struct timespec ts;
-  if (clock_gettime(CLOCK_MONOTONIC, &ts) == 0) {
-    return (ts.tv_sec * 1000L + (ts.tv_nsec / 1000000));
-  }
-
-  return 0;
-}
-
-static uni_bool _bytes_coming_speed_too_slow(unsigned int index) {
-  static long last_byte_coming_timestamp = 0;
-  long now = _get_clock_time_ms();
-  uni_bool timeout = false;
-
-  /* lost one check when overflow, but it is ok */
-  if (now - last_byte_coming_timestamp > ONE_FRAME_BYTE_TIMEOUT_MSEC &&
-      LAYOUT_SYNC_IDX != index) {
-    timeout = true;
-    LOGW(UART_COMM_TAG, "[%u->%u]", last_byte_coming_timestamp, now);
-  }
-
-  last_byte_coming_timestamp = now;
-  return timeout;
-}
-
 static uni_bool _is_payload_len_crc16_valid(CommPayloadLen length, CommChecksum crc) {
-  uint16_t length_crc = crc16((const char *)&length, sizeof(CommPayloadLen));
+  unsigned char len[2];
+  _u16_2_byte2_big_endian(length, len);
+  uint16_t length_crc = crc16((const char *)len, sizeof(CommPayloadLen));
   if (crc != length_crc) {
     LOGW(UART_COMM_TAG, "crc_recv=%d, crc_calc=%d", crc, length_crc);
   }
@@ -602,14 +574,6 @@ static void _protocol_buffer_generate_byte_by_byte(unsigned char recv_c) {
   static uint16_t length_crc16 = 0;
   static CommPayloadLen protocol_buffer_length = DEFAULT_PROTOCOL_BUF_SIZE;
   CommProtocolPacket *packet;
-
-  /* check timestamp to reset status when physical error */
-  if (_bytes_coming_speed_too_slow(index)) {
-    LOGW(UART_COMM_TAG, "reset protocol buffer automatically[%d]", index);
-    _reset_protocol_buffer_status(&index, &length, &length_crc16);
-    _try_garbage_collection_protocol_buffer(&g_comm_protocol_business.protocol_buffer,
-                                            &protocol_buffer_length);
-  }
 
   /* protect heap use, cannot alloc large than 8K now */
   if (_is_protocol_buffer_overflow(protocol_buffer_length)) {
