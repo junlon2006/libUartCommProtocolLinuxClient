@@ -3,6 +3,7 @@
 #include "uni_communication.h"
 #include "uni_channel.h"
 #include "uni_asr_business.h"
+#include "uni_event_list.h"
 
 #include <stdio.h>
 #include <unistd.h>
@@ -14,9 +15,16 @@
 
 #define TAG "main"
 
+static EventListHandle g_event_list = NULL;
+
 static void _comm_recv_packet_handler(CommPacket *packet) {
+  CommPacket *comm_packet  = (CommPacket *)malloc(sizeof(CommPacket) + packet->payload_len);
+  comm_packet->cmd         = packet->cmd;
+  comm_packet->payload_len = packet->payload_len;
+  memcpy(comm_packet->payload, packet->payload, packet->payload_len);
+
+  EventListAdd(g_event_list, comm_packet, EVENT_LIST_PRIORITY_MEDIUM);
   LOGD(TAG, "recv packet, cmd=%d, len=%d", packet->cmd, packet->payload_len);
-  ChnlReceiveCommProtocolPacket(packet);
 }
 
 /* 唤醒模式 */
@@ -135,6 +143,15 @@ static void _parse_command_line(char *cmd, int len) {
   _usage();
 }
 
+static void __event_list_event_handler(void *event) {
+  CommPacket *packet = (CommPacket *)event;
+  ChnlReceiveCommProtocolPacket(packet);
+}
+
+static void __event_list_event_free_handler(void *event) {
+  free(event);
+}
+
 int main(int argc, char *argv[]) {
   LogLevelSet(N_LOG_TRACK);
 
@@ -151,6 +168,12 @@ int main(int argc, char *argv[]) {
   snprintf(uart_config.device, sizeof(uart_config.device), "%s", argv[1]);
   uart_config.speed = B921600;
   if (0 != UartInitialize(&uart_config)) {
+    return -1;
+  }
+
+  g_event_list = EventListCreate(__event_list_event_handler, __event_list_event_free_handler);
+  if (NULL != g_event_list) {
+    LOGE(TAG, "create eventlist failed");
     return -1;
   }
 
