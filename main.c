@@ -172,7 +172,7 @@ int main(int argc, char *argv[]) {
   }
 
   g_event_list = EventListCreate(__event_list_event_handler, __event_list_event_free_handler);
-  if (NULL != g_event_list) {
+  if (NULL == g_event_list) {
     LOGE(TAG, "create eventlist failed");
     return -1;
   }
